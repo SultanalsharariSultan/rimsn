@@ -1,32 +1,62 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Rimsn Gaming Hub</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#070b17">
+  <title>Rimsn Gaming Hub | إعدادات الألعاب والأخبار</title>
   <style>
-    :root{font-family:system-ui,sans-serif;color:#eef2ff;background:#080b16}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#172554,#080b16 55%)}main{width:min(1100px,calc(100% - 32px));margin:auto;padding:38px 0}.top{display:flex;justify-content:space-between;align-items:center;gap:16px}.brand{font-weight:900;letter-spacing:.12em;color:#67e8f9}.user{color:#a5b4fc}h1{font-size:clamp(2rem,6vw,4rem);margin:42px 0 8px}.lead{color:#cbd5e1;max-width:650px;line-height:1.8}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:28px}.card{background:#11182b;border:1px solid #283657;border-radius:18px;padding:22px;box-shadow:0 16px 35px #0003}h2{margin-top:0}label{display:block;color:#cbd5e1;margin:12px 0 6px}input,textarea,select{width:100%;padding:12px;border:1px solid #3b4b70;background:#0b1020;color:inherit;border-radius:9px;font:inherit}button{border:0;border-radius:9px;padding:11px 16px;background:#67e8f9;color:#082f49;font:inherit;font-weight:800;cursor:pointer}button.secondary{background:#25355d;color:#e0e7ff}button.danger{background:#fb7185;color:#4c0519}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.news{display:grid;gap:10px}.news a{color:#67e8f9;text-decoration:none;font-weight:700}.news p{color:#cbd5e1;margin:7px 0}.muted{color:#94a3b8}.status{margin-top:16px;color:#fbbf24;min-height:24px}.hidden{display:none}.modal{position:fixed;inset:0;background:#0009;display:grid;place-items:center;padding:20px}.modal .card{width:min(430px,100%)}.close{float:left;background:transparent;color:#cbd5e1;font-size:1.3rem;padding:0}
+    :root{font-family:system-ui,-apple-system,sans-serif;color:#f8fafc;background:#070b17}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 10% 0,#172554,transparent 42%),#070b17}
+    main{width:min(1180px,calc(100% - 32px));margin:auto;padding:28px 0 60px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #24304c;padding-bottom:20px}
+    .brand{color:#67e8f9;font-weight:900;letter-spacing:.1em}.source{color:#94a3b8;font-size:.85rem}
+    h1{font-size:clamp(2rem,6vw,4.4rem);line-height:1.1;margin:55px 0 12px;max-width:850px}
+    .lead{color:#cbd5e1;line-height:1.8;max-width:720px;font-size:1.05rem}
+    .tabs{display:flex;gap:10px;overflow:auto;margin:30px 0 18px;padding-bottom:4px}
+    .tabs button{white-space:nowrap}.tabs button.active{background:#67e8f9;color:#082f49}
+    button{border:0;border-radius:10px;padding:12px 18px;background:#1c2b4d;color:#e0f2fe;font:inherit;font-weight:800;cursor:pointer}
+    button:hover{filter:brightness(1.15)}button.primary{background:#67e8f9;color:#082f49}
+    .panel{display:none}.panel.active{display:block}.layout{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
+    .card{background:#10182b;border:1px solid #283657;border-radius:18px;padding:24px;box-shadow:0 16px 35px #0004}
+    h2{margin:0 0 8px}h3{color:#67e8f9;margin-bottom:7px}.muted{color:#94a3b8}.hint{color:#cbd5e1;line-height:1.7}
+    .settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+    .setting{border:1px solid #283657;border-radius:12px;padding:16px;background:#0b1020}.setting strong{display:block;color:#f8fafc;margin-bottom:6px}
+    .news{display:grid;gap:12px}.news article{border-bottom:1px solid #283657;padding-bottom:12px}.news a{color:#67e8f9;font-weight:800;text-decoration:none}.news p{color:#cbd5e1;line-height:1.55;margin:7px 0 0}
+    .status{min-height:26px;color:#fbbf24;margin-top:16px}.footer{color:#64748b;text-align:center;margin-top:34px;font-size:.85rem}
+    @media(max-width:760px){.layout{grid-template-columns:1fr}.settings-grid{grid-template-columns:1fr}h1{margin-top:35px}.top{align-items:flex-start;flex-direction:column}}
   </style>
 </head>
-<body><main>
-  <div class="top"><div class="brand">RIMSN GAMING HUB</div><div id="user-area" class="user">زائر <button class="secondary" id="login-open">تسجيل الدخول</button></div></div>
-  <h1>إعداداتك. ألعابك. أخبارك.</h1><p class="lead">منصة عربية تجمع إعدادات Steam وPlayStation وXbox، وآخر أخبار الألعاب من مصادر RSS مفتوحة.</p>
-  <div class="actions"><button id="settings-open">إعدادات المنصات</button><button class="secondary" id="refresh-news">تحديث الأخبار</button></div>
-  <div class="grid"><section class="card"><h2>إعدادات Steam</h2><p class="muted">حسّن الحساسية وFOV وFPS لألعابك.</p><div id="steam-summary" class="muted">سجّل الدخول لحفظ إعداداتك.</div></section><section class="card"><h2>إعدادات PlayStation</h2><p class="muted">إعدادات يد التحكم والصوت والشاشة.</p><div id="playstation-summary" class="muted">سجّل الدخول لحفظ إعداداتك.</div></section><section class="card"><h2>إعدادات Xbox</h2><p class="muted">إعدادات الشبكة ويد التحكم والصورة.</p><div id="xbox-summary" class="muted">سجّل الدخول لحفظ إعداداتك.</div></section><section class="card"><h2>آخر الأخبار</h2><div id="news" class="news"><p class="muted">جار تحميل الأخبار...</p></div></section></div>
-  <div id="status" class="status"></div>
+<body>
+<main>
+  <header class="top"><div class="brand">RIMSN GAMING HUB</div><div class="source">منصة مجانية بدون تسجيل</div></header>
+  <h1>إعدادات احترافية وأخبار الألعاب في مكان واحد</h1>
+  <p class="lead">اختر منصتك، تصفح الإعدادات المحدثة واستفد من آخر أخبار الألعاب مباشرة. لا نطلب حساباً ولا نربط حسابك في Steam أو Sony أو Xbox.</p>
+  <nav class="tabs" aria-label="منصات الألعاب">
+    <button class="active" data-tab="xbox">إعدادات Xbox</button>
+    <button data-tab="steam">إعدادات Steam</button>
+    <button data-tab="playstation">إعدادات Sony PlayStation</button>
+    <button data-tab="news">أخبار الألعاب</button>
+  </nav>
+  <section class="panel active" id="xbox">
+    <div class="layout"><article class="card"><h2>إعدادات Xbox الاحترافية</h2><p class="hint">إعدادات عامة مناسبة لألعاب التصويب والسباقات. ابدأ بها ثم عدّلها حسب يدك وشاشتك.</p><div class="settings-grid"><div class="setting"><strong>حساسية التصويب</strong><span class="muted">ابدأ بـ 4 إلى 6، وارفعها تدريجياً.</span></div><div class="setting"><strong>وضع الاهتزاز</strong><span class="muted">فعّله للألعاب التنافسية إذا كان لا يشتتك.</span></div><div class="setting"><strong>مجال الرؤية FOV</strong><span class="muted">من 95 إلى 110 للشاشات الكبيرة.</span></div><div class="setting"><strong>الشبكة</strong><span class="muted">استخدم كابل Ethernet وNAT مفتوحاً عند الإمكان.</span></div></div></article><article class="card"><h2>نصيحة اليوم</h2><p class="hint">اضبط منطقة الـ Deadzone بأقل قيمة لا تسبب انجراف العصا، ثم اختبرها في التدريب قبل اللعب التنافسي.</p></article></div>
+  </section>
+  <section class="panel" id="steam">
+    <div class="layout"><article class="card"><h2>إعدادات Steam الاحترافية</h2><p class="hint">إعدادات عامة لتحسين الأداء والتحكم على الكمبيوتر.</p><div class="settings-grid"><div class="setting"><strong>FPS</strong><span class="muted">ثبّت الإطارات على معدل شاشتك لتقليل التقطيع.</span></div><div class="setting"><strong>حساسية الماوس</strong><span class="muted">استخدم DPI بين 800 و1600 واضبط الحساسية داخل اللعبة.</span></div><div class="setting"><strong>Steam Input</strong><span class="muted">فعّله للألعاب التي لا تدعم يد التحكم جيداً.</span></div><div class="setting"><strong>وضع الأداء</strong><span class="muted">حدّث تعريف البطاقة وأغلق البرامج الخلفية الثقيلة.</span></div></div></article><article class="card"><h2>تحسين سريع</h2><p class="hint">تحقق من ملفات اللعبة، فعّل معدل التحديث الأعلى، واستخدم اتصالاً سلكياً للألعاب التنافسية.</p></article></div>
+  </section>
+  <section class="panel" id="playstation">
+    <div class="layout"><article class="card"><h2>إعدادات Sony PlayStation</h2><p class="hint">إعدادات عملية لجهاز PS4 وPS5 ويد DualSense.</p><div class="settings-grid"><div class="setting"><strong>الصورة</strong><span class="muted">فعّل 120Hz وVRR إذا كانت الشاشة تدعمهما.</span></div><div class="setting"><strong>الصوت</strong><span class="muted">اضبط 3D Audio بما يناسب سماعتك ومكان اللعب.</span></div><div class="setting"><strong>يد التحكم</strong><span class="muted">اضبط قوة الاهتزاز والمحفزات لتقليل إجهاد اليد.</span></div><div class="setting"><strong>الاتصال</strong><span class="muted">استخدم اختبار الشبكة وتأكد من أقل Ping ممكن.</span></div></div></article><article class="card"><h2>إعداد موصى به</h2><p class="hint">استخدم وضع Performance في الألعاب السريعة، وQuality عندما تفضل الدقة والمؤثرات.</p></article></div>
+  </section>
+  <section class="panel" id="news"><div class="card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h2>أخبار الألعاب</h2><p class="muted">آخر الأخبار من Eurogamer RSS المفتوح.</p></div><button class="primary" id="refresh-news">تحديث</button></div><div class="news" id="news-list"><p class="muted">جار تحميل الأخبار...</p></div></div></section>
+  <div id="status" class="status" role="status"></div>
+  <div class="footer">المحتوى الإرشادي عام؛ تحقق من إعدادات لعبتك وجهازك قبل اعتمادها.</div>
 </main>
-<div id="auth-modal" class="modal hidden"><div class="card"><button class="close" id="auth-close">×</button><h2 id="auth-title">تسجيل الدخول</h2><form id="auth-form"><div id="name-field" class="hidden"><label>الاسم</label><input id="name"></div><label>البريد الإلكتروني</label><input id="email" type="email" required><label>كلمة المرور</label><input id="password" type="password" minlength="8" required><div class="actions"><button type="submit">متابعة</button><button type="button" class="secondary" id="auth-switch">إنشاء حساب</button></div></form></div></div>
-<div id="settings-modal" class="modal hidden"><div class="card"><button class="close" id="settings-close">×</button><h2>إعدادات المنصات</h2><form id="settings-form"><label>Steam — اسم المستخدم</label><input id="steam"><label>PlayStation — المعرّف</label><input id="playstation"><label>Xbox — Gamertag</label><input id="xbox"><div class="actions"><button type="submit">حفظ الإعدادات</button></div></form></div></div>
 <script>
-  const $=id=>document.getElementById(id), state={token:localStorage.getItem('rimsn_token'),user:null,register:false};
-  function status(text){$('status').textContent=text}
-  function open(id){$(id).classList.remove('hidden')} function close(id){$(id).classList.add('hidden')}
-  async function api(url,options={}){options.headers={...(options.headers||{}),...(state.token?{Authorization:`Bearer ${state.token}`}:{})};const r=await fetch(url,options);const data=await r.json();if(!r.ok)throw Error(data.error||'حدث خطأ');return data}
-  function render(){if(!state.user)return;$('user-area').innerHTML=`مرحباً ${state.user.name} <button class="danger" id="logout">خروج</button>`;$('logout').onclick=()=>{localStorage.removeItem('rimsn_token');location.reload()};for(const key of ['steam','playstation','xbox'])$(key+'-summary').textContent=state.user.settings[key]?.id||state.user.settings[key]?.name||'لم تتم الإضافة'}
-  async function loadMe(){if(!state.token)return;try{state.user=(await api('/api/me')).user;render()}catch{localStorage.removeItem('rimsn_token');state.token=null}}
-  async function loadNews(){try{const data=await api('/api/news');$('news').innerHTML=data.items.map(x=>`<article><a href="${x.link}" target="_blank" rel="noopener">${x.title}</a><p>${x.description.slice(0,180)}</p></article>`).join('')||'<p class="muted">لا توجد أخبار.</p>'}catch(e){$('news').innerHTML='<p class="muted">تعذر تحميل الأخبار حالياً.</p>'}}
-  $('login-open').onclick=()=>{state.register=false;$('auth-title').textContent='تسجيل الدخول';$('name-field').classList.add('hidden');open('auth-modal')};$('auth-close').onclick=()=>close('auth-modal');$('settings-close').onclick=()=>close('settings-modal');$('refresh-news').onclick=loadNews;$('settings-open').onclick=()=>{if(!state.user){status('سجّل الدخول أولاً');return}for(const key of ['steam','playstation','xbox'])$(key).value=state.user.settings[key]?.id||state.user.settings[key]?.name||'';open('settings-modal')};
-  $('auth-switch').onclick=()=>{state.register=!state.register;$('auth-title').textContent=state.register?'إنشاء حساب':'تسجيل الدخول';$('name-field').classList.toggle('hidden',!state.register);$('auth-switch').textContent=state.register?'لدي حساب':'إنشاء حساب'};
-  $('auth-form').onsubmit=async e=>{e.preventDefault();try{const url=state.register?'/api/auth/register':'/api/auth/login',body=state.register?{name:$('name').value,email:$('email').value,password:$('password').value}:{email:$('email').value,password:$('password').value};const data=await api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});state.token=data.token;localStorage.setItem('rimsn_token',state.token);state.user=data.user;close('auth-modal');render();status('تم تسجيل الدخول بنجاح')}catch(e){status(e.message)}};
-  $('settings-form').onsubmit=async e=>{e.preventDefault();try{const settings={steam:{name:$('steam').value},playstation:{id:$('playstation').value},xbox:{id:$('xbox').value}};state.user=(await api('/api/me/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({settings})})).user;render();close('settings-modal');status('تم حفظ الإعدادات')}catch(e){status(e.message)}};
-  loadMe();loadNews();
-</script></body></html>
+  const tabs=document.querySelectorAll('[data-tab]'), panels=document.querySelectorAll('.panel'), status=document.getElementById('status');
+  tabs.forEach(button=>button.addEventListener('click',()=>{tabs.forEach(item=>item.classList.toggle('active',item===button));panels.forEach(panel=>panel.classList.toggle('active',panel.id===button.dataset.tab));}));
+  function clean(text){const node=document.createElement('div');node.textContent=text;return node.innerHTML}
+  async function loadNews(){status.textContent='جار تحديث الأخبار...';try{const response=await fetch('/api/news');const data=await response.json();if(!response.ok)throw new Error(data.error||'تعذر تحميل الأخبار');document.getElementById('news-list').innerHTML=data.items.map(item=>`<article><a href="${clean(item.link)}" target="_blank" rel="noopener">${clean(item.title)}</a><p>${clean(item.description.slice(0,240))}</p></article>`).join('')||'<p class="muted">لا توجد أخبار حالياً.</p>';status.textContent='تم تحديث الأخبار.';setTimeout(()=>status.textContent='',2500)}catch(error){status.textContent=error.message}}
+  document.getElementById('refresh-news').addEventListener('click',loadNews);loadNews();
+</script>
+</body>
+</html>
