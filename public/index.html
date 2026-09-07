@@ -1,197 +1,32 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#0b1220">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <title>Rimsn - نداء استغاثة</title>
-    <style>
-      :root { color-scheme: dark; font-family: system-ui, sans-serif; }
-      body { margin: 0; min-height: 100vh; background: #0b1220; color: #f8fafc; }
-      main { width: min(900px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0; }
-      .brand { color: #38bdf8; font-size: .9rem; font-weight: 700; letter-spacing: .12em; }
-      h1 { margin: 12px 0 8px; font-size: clamp(2rem, 6vw, 3.5rem); }
-      .intro { color: #cbd5e1; line-height: 1.7; }
-      form, .status { padding: 24px; border: 1px solid #243247; border-radius: 20px; background: #111c2e; }
-      label { display: block; margin: 16px 0 8px; color: #cbd5e1; font-weight: 600; }
-      input, textarea { box-sizing: border-box; width: 100%; padding: 13px 14px; border: 1px solid #334155; border-radius: 10px; background: #0b1220; color: inherit; font: inherit; }
-      textarea { min-height: 100px; resize: vertical; }
-      .location { display: flex; gap: 10px; align-items: center; }
-      .location button { white-space: nowrap; }
-      button { cursor: pointer; border: 0; border-radius: 10px; padding: 13px 18px; color: #082f49; background: #38bdf8; font: inherit; font-weight: 800; }
-      button.secondary { color: #e0f2fe; background: #1e3a5f; }
-      button:disabled { cursor: wait; opacity: .6; }
-      .submit { width: 100%; margin-top: 24px; background: #fb7185; color: #450a0a; font-size: 1.05rem; }
-      .status { display: none; margin-top: 16px; line-height: 1.6; }
-      .status.visible { display: block; }
-      .status.success { border-color: #22c55e; }
-      .status.error { border-color: #fb7185; }
-      .coords { color: #94a3b8; font-size: .9rem; }
-      #map { height: 360px; margin-top: 16px; border-radius: 14px; overflow: hidden; display: none; }
-      #map.visible { display: block; }
-      .alerts { margin-top: 24px; }
-      .alerts h2 { font-size: 1.2rem; }
-      .alert-list { display: grid; gap: 10px; }
-      .alert-item { padding: 14px; border: 1px solid #243247; border-radius: 12px; background: #111c2e; color: #cbd5e1; }
-      .alert-item strong { color: #fb7185; }
-      .empty { color: #94a3b8; }
-    </style>
-  </head>
-  <body>
-    <main>
-      <div class="brand">RIMSN OFFLINE MESH</div>
-      <h1>إرسال نداء استغاثة</h1>
-      <p class="intro">أرسل موقعك ورسالة قصيرة إلى خادم Rimsn. اسمح للمتصفح بالوصول إلى موقعك قبل الإرسال.</p>
-      <form id="emergency-form">
-        <label for="senderId">معرّفك</label>
-        <input id="senderId" name="senderId" required placeholder="مثال: USER-001">
-        <label for="message">الرسالة</label>
-        <textarea id="message" name="message" placeholder="اكتب تفاصيل حالتك وموقعك...">SOS - أحتاج إلى المساعدة</textarea>
-        <label>الموقع</label>
-        <div class="location">
-          <button class="secondary" id="location-button" type="button">تحديد موقعي</button>
-          <span class="coords" id="coordinates">لم يتم تحديد الموقع</span>
-        </div>
-        <div id="map" aria-label="خريطة العالم"></div>
-        <input id="latitude" name="latitude" type="hidden" required>
-        <input id="longitude" name="longitude" type="hidden" required>
-        <button class="submit" id="submit-button" type="submit">إرسال نداء الاستغاثة</button>
-      </form>
-      <div class="status" id="status" role="status"></div>
-      <section class="alerts" aria-labelledby="alerts-title">
-        <h2 id="alerts-title">نداءات الاستغاثة للمستخدمين</h2>
-        <div class="alert-list" id="alert-list"><p class="empty">جار تحميل النداءات...</p></div>
-      </section>
-    </main>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-      const form = document.getElementById('emergency-form');
-      const status = document.getElementById('status');
-      const locationButton = document.getElementById('location-button');
-      const coordinates = document.getElementById('coordinates');
-      const latitude = document.getElementById('latitude');
-      const longitude = document.getElementById('longitude');
-      const mapElement = document.getElementById('map');
-      const alertList = document.getElementById('alert-list');
-      let map;
-      let currentMarker;
-      const emergencyMarkers = new Map();
-
-      function showStatus(message, type) {
-        status.textContent = message;
-        status.className = `status visible ${type}`;
-      }
-
-      locationButton.addEventListener('click', () => {
-        mapElement.classList.add('visible');
-        if (!map) {
-          map = L.map('map').setView([25, 15], 2);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors'
-          }).addTo(map);
-          setTimeout(() => map.invalidateSize(), 0);
-        }
-        if (!navigator.geolocation) {
-          showStatus('المتصفح لا يدعم تحديد الموقع.', 'error');
-          return;
-        }
-        locationButton.disabled = true;
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            latitude.value = position.coords.latitude;
-            longitude.value = position.coords.longitude;
-            coordinates.textContent = `${Number(latitude.value).toFixed(5)}, ${Number(longitude.value).toFixed(5)}`;
-            if (currentMarker) currentMarker.remove();
-            currentMarker = L.marker([Number(latitude.value), Number(longitude.value)])
-              .addTo(map)
-              .bindPopup('موقعك الحالي')
-              .openPopup();
-            map.setView([Number(latitude.value), Number(longitude.value)], 12);
-            locationButton.disabled = false;
-          },
-          () => {
-            locationButton.disabled = false;
-            showStatus('تعذر تحديد الموقع. تحقق من صلاحية الموقع وحاول مرة أخرى.', 'error');
-          },
-          { enableHighAccuracy: true, timeout: 10000 }
-        );
-      });
-
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        if (!latitude.value || !longitude.value) {
-          showStatus('حدد موقعك أولاً قبل إرسال النداء.', 'error');
-          return;
-        }
-        const submitButton = document.getElementById('submit-button');
-        submitButton.disabled = true;
-        try {
-          const response = await fetch('/api/emergency', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              senderId: form.senderId.value.trim(),
-              latitude: Number(latitude.value),
-              longitude: Number(longitude.value),
-              message: form.message.value.trim()
-            })
-          });
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.error || 'تعذر إرسال النداء');
-          showStatus('تم إرسال نداء الاستغاثة بنجاح.', 'success');
-          form.reset();
-          coordinates.textContent = 'لم يتم تحديد الموقع';
-        } catch (error) {
-          showStatus(error.message, 'error');
-        } finally {
-          submitButton.disabled = false;
-        }
-      });
-
-      function renderEmergencies(emergencies) {
-        if (!emergencies.length) {
-          alertList.innerHTML = '<p class="empty">لا توجد نداءات مسجلة حالياً.</p>';
-          return;
-        }
-        alertList.innerHTML = emergencies.map((emergency) => `
-          <article class="alert-item">
-            <strong>نداء استغاثة من ${escapeHtml(emergency.senderId)}</strong>
-            <div>${escapeHtml(emergency.message || 'بحاجة إلى المساعدة')}</div>
-            <small>${Number(emergency.latitude).toFixed(5)}, ${Number(emergency.longitude).toFixed(5)}</small>
-          </article>
-        `).join('');
-      }
-
-      function escapeHtml(value) {
-        return String(value).replace(/[&<>"']/g, (character) => ({
-          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-        }[character]));
-      }
-
-      async function loadEmergencies() {
-        try {
-          const response = await fetch('/api/emergencies');
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.error || 'تعذر تحميل النداءات');
-          renderEmergencies(result.emergencies);
-          if (map) {
-            result.emergencies.forEach((emergency) => {
-              if (emergencyMarkers.has(emergency._id)) return;
-              const marker = L.marker([emergency.latitude, emergency.longitude])
-                .addTo(map)
-                .bindPopup(`<strong>نداء من ${escapeHtml(emergency.senderId)}</strong><br>${escapeHtml(emergency.message || '')}`);
-              emergencyMarkers.set(emergency._id, marker);
-            });
-          }
-        } catch (error) {
-          alertList.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
-        }
-      }
-
-      loadEmergencies();
-      setInterval(loadEmergencies, 15000);
-    </script>
-  </body>
-</html>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Rimsn Gaming Hub</title>
+  <style>
+    :root{font-family:system-ui,sans-serif;color:#eef2ff;background:#080b16}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#172554,#080b16 55%)}main{width:min(1100px,calc(100% - 32px));margin:auto;padding:38px 0}.top{display:flex;justify-content:space-between;align-items:center;gap:16px}.brand{font-weight:900;letter-spacing:.12em;color:#67e8f9}.user{color:#a5b4fc}h1{font-size:clamp(2rem,6vw,4rem);margin:42px 0 8px}.lead{color:#cbd5e1;max-width:650px;line-height:1.8}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:28px}.card{background:#11182b;border:1px solid #283657;border-radius:18px;padding:22px;box-shadow:0 16px 35px #0003}h2{margin-top:0}label{display:block;color:#cbd5e1;margin:12px 0 6px}input,textarea,select{width:100%;padding:12px;border:1px solid #3b4b70;background:#0b1020;color:inherit;border-radius:9px;font:inherit}button{border:0;border-radius:9px;padding:11px 16px;background:#67e8f9;color:#082f49;font:inherit;font-weight:800;cursor:pointer}button.secondary{background:#25355d;color:#e0e7ff}button.danger{background:#fb7185;color:#4c0519}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.news{display:grid;gap:10px}.news a{color:#67e8f9;text-decoration:none;font-weight:700}.news p{color:#cbd5e1;margin:7px 0}.muted{color:#94a3b8}.status{margin-top:16px;color:#fbbf24;min-height:24px}.hidden{display:none}.modal{position:fixed;inset:0;background:#0009;display:grid;place-items:center;padding:20px}.modal .card{width:min(430px,100%)}.close{float:left;background:transparent;color:#cbd5e1;font-size:1.3rem;padding:0}
+  </style>
+</head>
+<body><main>
+  <div class="top"><div class="brand">RIMSN GAMING HUB</div><div id="user-area" class="user">زائر <button class="secondary" id="login-open">تسجيل الدخول</button></div></div>
+  <h1>إعداداتك. ألعابك. أخبارك.</h1><p class="lead">منصة عربية تجمع إعدادات Steam وPlayStation وXbox، وآخر أخبار الألعاب من مصادر RSS مفتوحة.</p>
+  <div class="actions"><button id="settings-open">إعدادات المنصات</button><button class="secondary" id="refresh-news">تحديث الأخبار</button></div>
+  <div class="grid"><section class="card"><h2>إعدادات Steam</h2><p class="muted">حسّن الحساسية وFOV وFPS لألعابك.</p><div id="steam-summary" class="muted">سجّل الدخول لحفظ إعداداتك.</div></section><section class="card"><h2>إعدادات PlayStation</h2><p class="muted">إعدادات يد التحكم والصوت والشاشة.</p><div id="playstation-summary" class="muted">سجّل الدخول لحفظ إعداداتك.</div></section><section class="card"><h2>إعدادات Xbox</h2><p class="muted">إعدادات الشبكة ويد التحكم والصورة.</p><div id="xbox-summary" class="muted">سجّل الدخول لحفظ إعداداتك.</div></section><section class="card"><h2>آخر الأخبار</h2><div id="news" class="news"><p class="muted">جار تحميل الأخبار...</p></div></section></div>
+  <div id="status" class="status"></div>
+</main>
+<div id="auth-modal" class="modal hidden"><div class="card"><button class="close" id="auth-close">×</button><h2 id="auth-title">تسجيل الدخول</h2><form id="auth-form"><div id="name-field" class="hidden"><label>الاسم</label><input id="name"></div><label>البريد الإلكتروني</label><input id="email" type="email" required><label>كلمة المرور</label><input id="password" type="password" minlength="8" required><div class="actions"><button type="submit">متابعة</button><button type="button" class="secondary" id="auth-switch">إنشاء حساب</button></div></form></div></div>
+<div id="settings-modal" class="modal hidden"><div class="card"><button class="close" id="settings-close">×</button><h2>إعدادات المنصات</h2><form id="settings-form"><label>Steam — اسم المستخدم</label><input id="steam"><label>PlayStation — المعرّف</label><input id="playstation"><label>Xbox — Gamertag</label><input id="xbox"><div class="actions"><button type="submit">حفظ الإعدادات</button></div></form></div></div>
+<script>
+  const $=id=>document.getElementById(id), state={token:localStorage.getItem('rimsn_token'),user:null,register:false};
+  function status(text){$('status').textContent=text}
+  function open(id){$(id).classList.remove('hidden')} function close(id){$(id).classList.add('hidden')}
+  async function api(url,options={}){options.headers={...(options.headers||{}),...(state.token?{Authorization:`Bearer ${state.token}`}:{})};const r=await fetch(url,options);const data=await r.json();if(!r.ok)throw Error(data.error||'حدث خطأ');return data}
+  function render(){if(!state.user)return;$('user-area').innerHTML=`مرحباً ${state.user.name} <button class="danger" id="logout">خروج</button>`;$('logout').onclick=()=>{localStorage.removeItem('rimsn_token');location.reload()};for(const key of ['steam','playstation','xbox'])$(key+'-summary').textContent=state.user.settings[key]?.id||state.user.settings[key]?.name||'لم تتم الإضافة'}
+  async function loadMe(){if(!state.token)return;try{state.user=(await api('/api/me')).user;render()}catch{localStorage.removeItem('rimsn_token');state.token=null}}
+  async function loadNews(){try{const data=await api('/api/news');$('news').innerHTML=data.items.map(x=>`<article><a href="${x.link}" target="_blank" rel="noopener">${x.title}</a><p>${x.description.slice(0,180)}</p></article>`).join('')||'<p class="muted">لا توجد أخبار.</p>'}catch(e){$('news').innerHTML='<p class="muted">تعذر تحميل الأخبار حالياً.</p>'}}
+  $('login-open').onclick=()=>{state.register=false;$('auth-title').textContent='تسجيل الدخول';$('name-field').classList.add('hidden');open('auth-modal')};$('auth-close').onclick=()=>close('auth-modal');$('settings-close').onclick=()=>close('settings-modal');$('refresh-news').onclick=loadNews;$('settings-open').onclick=()=>{if(!state.user){status('سجّل الدخول أولاً');return}for(const key of ['steam','playstation','xbox'])$(key).value=state.user.settings[key]?.id||state.user.settings[key]?.name||'';open('settings-modal')};
+  $('auth-switch').onclick=()=>{state.register=!state.register;$('auth-title').textContent=state.register?'إنشاء حساب':'تسجيل الدخول';$('name-field').classList.toggle('hidden',!state.register);$('auth-switch').textContent=state.register?'لدي حساب':'إنشاء حساب'};
+  $('auth-form').onsubmit=async e=>{e.preventDefault();try{const url=state.register?'/api/auth/register':'/api/auth/login',body=state.register?{name:$('name').value,email:$('email').value,password:$('password').value}:{email:$('email').value,password:$('password').value};const data=await api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});state.token=data.token;localStorage.setItem('rimsn_token',state.token);state.user=data.user;close('auth-modal');render();status('تم تسجيل الدخول بنجاح')}catch(e){status(e.message)}};
+  $('settings-form').onsubmit=async e=>{e.preventDefault();try{const settings={steam:{name:$('steam').value},playstation:{id:$('playstation').value},xbox:{id:$('xbox').value}};state.user=(await api('/api/me/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({settings})})).user;render();close('settings-modal');status('تم حفظ الإعدادات')}catch(e){status(e.message)}};
+  loadMe();loadNews();
+</script></body></html>

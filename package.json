@@ -1,7 +1,7 @@
 {
   "name": "rimsn-app",
   "version": "1.0.0",
-  "description": "Offline emergency and mapping mesh network app",
+  "description": "Rimsn gaming settings and news hub",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
