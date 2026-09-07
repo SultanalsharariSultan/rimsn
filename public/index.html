@@ -4,11 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b1220">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <title>Rimsn - نداء استغاثة</title>
     <style>
       :root { color-scheme: dark; font-family: system-ui, sans-serif; }
       body { margin: 0; min-height: 100vh; background: #0b1220; color: #f8fafc; }
-      main { width: min(680px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0; }
+      main { width: min(900px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0; }
       .brand { color: #38bdf8; font-size: .9rem; font-weight: 700; letter-spacing: .12em; }
       h1 { margin: 12px 0 8px; font-size: clamp(2rem, 6vw, 3.5rem); }
       .intro { color: #cbd5e1; line-height: 1.7; }
@@ -27,6 +28,14 @@
       .status.success { border-color: #22c55e; }
       .status.error { border-color: #fb7185; }
       .coords { color: #94a3b8; font-size: .9rem; }
+      #map { height: 360px; margin-top: 16px; border-radius: 14px; overflow: hidden; display: none; }
+      #map.visible { display: block; }
+      .alerts { margin-top: 24px; }
+      .alerts h2 { font-size: 1.2rem; }
+      .alert-list { display: grid; gap: 10px; }
+      .alert-item { padding: 14px; border: 1px solid #243247; border-radius: 12px; background: #111c2e; color: #cbd5e1; }
+      .alert-item strong { color: #fb7185; }
+      .empty { color: #94a3b8; }
     </style>
   </head>
   <body>
@@ -44,12 +53,18 @@
           <button class="secondary" id="location-button" type="button">تحديد موقعي</button>
           <span class="coords" id="coordinates">لم يتم تحديد الموقع</span>
         </div>
+        <div id="map" aria-label="خريطة العالم"></div>
         <input id="latitude" name="latitude" type="hidden" required>
         <input id="longitude" name="longitude" type="hidden" required>
         <button class="submit" id="submit-button" type="submit">إرسال نداء الاستغاثة</button>
       </form>
       <div class="status" id="status" role="status"></div>
+      <section class="alerts" aria-labelledby="alerts-title">
+        <h2 id="alerts-title">نداءات الاستغاثة للمستخدمين</h2>
+        <div class="alert-list" id="alert-list"><p class="empty">جار تحميل النداءات...</p></div>
+      </section>
     </main>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
       const form = document.getElementById('emergency-form');
       const status = document.getElementById('status');
@@ -57,6 +72,11 @@
       const coordinates = document.getElementById('coordinates');
       const latitude = document.getElementById('latitude');
       const longitude = document.getElementById('longitude');
+      const mapElement = document.getElementById('map');
+      const alertList = document.getElementById('alert-list');
+      let map;
+      let currentMarker;
+      const emergencyMarkers = new Map();
 
       function showStatus(message, type) {
         status.textContent = message;
@@ -64,6 +84,15 @@
       }
 
       locationButton.addEventListener('click', () => {
+        mapElement.classList.add('visible');
+        if (!map) {
+          map = L.map('map').setView([25, 15], 2);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(map);
+          setTimeout(() => map.invalidateSize(), 0);
+        }
         if (!navigator.geolocation) {
           showStatus('المتصفح لا يدعم تحديد الموقع.', 'error');
           return;
@@ -74,6 +103,12 @@
             latitude.value = position.coords.latitude;
             longitude.value = position.coords.longitude;
             coordinates.textContent = `${Number(latitude.value).toFixed(5)}, ${Number(longitude.value).toFixed(5)}`;
+            if (currentMarker) currentMarker.remove();
+            currentMarker = L.marker([Number(latitude.value), Number(longitude.value)])
+              .addTo(map)
+              .bindPopup('موقعك الحالي')
+              .openPopup();
+            map.setView([Number(latitude.value), Number(longitude.value)], 12);
             locationButton.disabled = false;
           },
           () => {
@@ -114,6 +149,49 @@
           submitButton.disabled = false;
         }
       });
+
+      function renderEmergencies(emergencies) {
+        if (!emergencies.length) {
+          alertList.innerHTML = '<p class="empty">لا توجد نداءات مسجلة حالياً.</p>';
+          return;
+        }
+        alertList.innerHTML = emergencies.map((emergency) => `
+          <article class="alert-item">
+            <strong>نداء استغاثة من ${escapeHtml(emergency.senderId)}</strong>
+            <div>${escapeHtml(emergency.message || 'بحاجة إلى المساعدة')}</div>
+            <small>${Number(emergency.latitude).toFixed(5)}, ${Number(emergency.longitude).toFixed(5)}</small>
+          </article>
+        `).join('');
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (character) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+        }[character]));
+      }
+
+      async function loadEmergencies() {
+        try {
+          const response = await fetch('/api/emergencies');
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'تعذر تحميل النداءات');
+          renderEmergencies(result.emergencies);
+          if (map) {
+            result.emergencies.forEach((emergency) => {
+              if (emergencyMarkers.has(emergency._id)) return;
+              const marker = L.marker([emergency.latitude, emergency.longitude])
+                .addTo(map)
+                .bindPopup(`<strong>نداء من ${escapeHtml(emergency.senderId)}</strong><br>${escapeHtml(emergency.message || '')}`);
+              emergencyMarkers.set(emergency._id, marker);
+            });
+          }
+        } catch (error) {
+          alertList.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
+        }
+      }
+
+      loadEmergencies();
+      setInterval(loadEmergencies, 15000);
     </script>
   </body>
 </html>

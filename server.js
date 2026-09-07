@@ -43,6 +43,20 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.get('/api/emergencies', async (req, res) => {
+  try {
+    await connectToDatabase();
+    const emergencies = await Emergency.find()
+      .sort({ timestamp: -1 })
+      .limit(100)
+      .select('senderId latitude longitude message timestamp')
+      .lean();
+    res.json({ success: true, emergencies });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post('/api/emergency', async (req, res) => {
   try {
     const { senderId, latitude, longitude, message } = req.body;
