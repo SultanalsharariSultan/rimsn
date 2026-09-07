@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b1220">
+    <title>Rimsn - نداء استغاثة</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+      body { margin: 0; min-height: 100vh; background: #0b1220; color: #f8fafc; }
+      main { width: min(680px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0; }
+      .brand { color: #38bdf8; font-size: .9rem; font-weight: 700; letter-spacing: .12em; }
+      h1 { margin: 12px 0 8px; font-size: clamp(2rem, 6vw, 3.5rem); }
+      .intro { color: #cbd5e1; line-height: 1.7; }
+      form, .status { padding: 24px; border: 1px solid #243247; border-radius: 20px; background: #111c2e; }
+      label { display: block; margin: 16px 0 8px; color: #cbd5e1; font-weight: 600; }
+      input, textarea { box-sizing: border-box; width: 100%; padding: 13px 14px; border: 1px solid #334155; border-radius: 10px; background: #0b1220; color: inherit; font: inherit; }
+      textarea { min-height: 100px; resize: vertical; }
+      .location { display: flex; gap: 10px; align-items: center; }
+      .location button { white-space: nowrap; }
+      button { cursor: pointer; border: 0; border-radius: 10px; padding: 13px 18px; color: #082f49; background: #38bdf8; font: inherit; font-weight: 800; }
+      button.secondary { color: #e0f2fe; background: #1e3a5f; }
+      button:disabled { cursor: wait; opacity: .6; }
+      .submit { width: 100%; margin-top: 24px; background: #fb7185; color: #450a0a; font-size: 1.05rem; }
+      .status { display: none; margin-top: 16px; line-height: 1.6; }
+      .status.visible { display: block; }
+      .status.success { border-color: #22c55e; }
+      .status.error { border-color: #fb7185; }
+      .coords { color: #94a3b8; font-size: .9rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">RIMSN OFFLINE MESH</div>
+      <h1>إرسال نداء استغاثة</h1>
+      <p class="intro">أرسل موقعك ورسالة قصيرة إلى خادم Rimsn. اسمح للمتصفح بالوصول إلى موقعك قبل الإرسال.</p>
+      <form id="emergency-form">
+        <label for="senderId">معرّفك</label>
+        <input id="senderId" name="senderId" required placeholder="مثال: USER-001">
+        <label for="message">الرسالة</label>
+        <textarea id="message" name="message" placeholder="اكتب تفاصيل حالتك وموقعك...">SOS - أحتاج إلى المساعدة</textarea>
+        <label>الموقع</label>
+        <div class="location">
+          <button class="secondary" id="location-button" type="button">تحديد موقعي</button>
+          <span class="coords" id="coordinates">لم يتم تحديد الموقع</span>
+        </div>
+        <input id="latitude" name="latitude" type="hidden" required>
+        <input id="longitude" name="longitude" type="hidden" required>
+        <button class="submit" id="submit-button" type="submit">إرسال نداء الاستغاثة</button>
+      </form>
+      <div class="status" id="status" role="status"></div>
+    </main>
+    <script>
+      const form = document.getElementById('emergency-form');
+      const status = document.getElementById('status');
+      const locationButton = document.getElementById('location-button');
+      const coordinates = document.getElementById('coordinates');
+      const latitude = document.getElementById('latitude');
+      const longitude = document.getElementById('longitude');
+
+      function showStatus(message, type) {
+        status.textContent = message;
+        status.className = `status visible ${type}`;
+      }
+
+      locationButton.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+          showStatus('المتصفح لا يدعم تحديد الموقع.', 'error');
+          return;
+        }
+        locationButton.disabled = true;
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            latitude.value = position.coords.latitude;
+            longitude.value = position.coords.longitude;
+            coordinates.textContent = `${Number(latitude.value).toFixed(5)}, ${Number(longitude.value).toFixed(5)}`;
+            locationButton.disabled = false;
+          },
+          () => {
+            locationButton.disabled = false;
+            showStatus('تعذر تحديد الموقع. تحقق من صلاحية الموقع وحاول مرة أخرى.', 'error');
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!latitude.value || !longitude.value) {
+          showStatus('حدد موقعك أولاً قبل إرسال النداء.', 'error');
+          return;
+        }
+        const submitButton = document.getElementById('submit-button');
+        submitButton.disabled = true;
+        try {
+          const response = await fetch('/api/emergency', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              senderId: form.senderId.value.trim(),
+              latitude: Number(latitude.value),
+              longitude: Number(longitude.value),
+              message: form.message.value.trim()
+            })
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'تعذر إرسال النداء');
+          showStatus('تم إرسال نداء الاستغاثة بنجاح.', 'success');
+          form.reset();
+          coordinates.textContent = 'لم يتم تحديد الموقع';
+        } catch (error) {
+          showStatus(error.message, 'error');
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const Emergency = require('./emergencyModel');
@@ -8,6 +9,7 @@ const Emergency = require('./emergencyModel');
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
@@ -29,21 +31,7 @@ function connectToDatabase() {
 }
 
 app.get('/', (req, res) => {
-  res.type('html').send(`
-    <!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Rimsn Offline Mesh</title>
-      </head>
-      <body>
-        <h1>Rimsn Offline Mesh</h1>
-        <p>The API is running.</p>
-        <p>Health check: <a href="/api/health">/api/health</a></p>
-      </body>
-    </html>
-  `);
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/api/health', (req, res) => {
