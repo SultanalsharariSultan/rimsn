@@ -12,11 +12,6 @@ app.use(cors());
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/rimsnfl';
 
-// الاتصال بقاعدة البيانات
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch((err) => console.log('MongoDB connection error: ', err));
-
 app.get('/', (req, res) => {
   res.send('rimsn offline mesh server is running with DB support');
 });
@@ -38,6 +33,18 @@ app.post('/api/emergency', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+async function startServer() {
+  try {
+    await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000 });
+    console.log('MongoDB connected successfully');
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('MongoDB connection error:', error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
