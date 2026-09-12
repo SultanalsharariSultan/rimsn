@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowUpRight, Award, BadgeCheck, ChevronLeft, Globe2, Heart, Medal, MessageCircle, Search, Shield, Sparkles, Trophy, Users, X } from "lucide-react";
 import { players, samplePosts, type Player } from "../footballData";
 import { startLogin } from "../const";
@@ -6,6 +6,9 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 
 type View = "home" | "player";
+const languages = [
+  ["en", "English"], ["ar", "العربية"], ["es", "Español"], ["fr", "Français"], ["de", "Deutsch"], ["pt", "Português"], ["it", "Italiano"], ["tr", "Türkçe"], ["id", "Bahasa Indonesia"], ["ms", "Bahasa Melayu"], ["ur", "اردو"], ["fa", "فارسی"], ["ru", "Русский"], ["uk", "Українська"], ["zh", "中文"], ["ja", "日本語"], ["ko", "한국어"], ["hi", "हिन्दी"], ["bn", "বাংলা"], ["sw", "Kiswahili"], ["nl", "Nederlands"], ["el", "Ελληνικά"], ["pl", "Polski"], ["vi", "Tiếng Việt"], ["th", "ไทย"], ["fil", "Filipino"], ["ro", "Română"], ["sv", "Svenska"], ["no", "Norsk"], ["da", "Dansk"]
+] as const;
 const flag: Record<string, string> = { البرتغال: "🇵🇹", الأرجنتين: "🇦🇷", فرنسا: "🇫🇷", البرازيل: "🇧🇷", مصر: "🇪🇬", النرويج: "🇳🇴", إنجلترا: "🏴", بلجيكا: "🇧🇪", كرواتيا: "🇭🇷", السعودية: "🇸🇦" };
 
 function PlayerCard({ player, onClick }: { player: Player; onClick: () => void }) {
@@ -26,6 +29,7 @@ export default function Home() {
   const [showAll, setShowAll] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [following, setFollowing] = useState(false);
+  const [language, setLanguage] = useState("ar");
   const [joinForm, setJoinForm] = useState({ displayName: "", nameEn: "", country: "", club: "", position: "", jerseyNumber: "", bio: "" });
   const filtered = useMemo(() => players.filter((p) => `${p.name} ${p.nameEn} ${p.country} ${p.club}`.toLowerCase().includes(query.toLowerCase())).filter((p) => activeFilter === "الكل" || p.position === activeFilter), [activeFilter, query]);
   const openPlayer = (player: Player) => { setSelected(player); setFollowing(false); setView("player"); window.scrollTo({ top: 0, behavior: "smooth" }); };
@@ -33,9 +37,11 @@ export default function Home() {
   const publish = () => { if (!selected || !draft.trim()) return; setExtraPosts((current) => ({ ...current, [selected.id]: [...(current[selected.id] ?? []), draft.trim()] })); setDraft(""); };
   const openJoin = () => { if (!isAuthenticated) { startLogin(); return; } setShowJoin(true); };
   const submitJoin = (event: React.FormEvent) => { event.preventDefault(); registerPlayer.mutate({ ...joinForm, jerseyNumber: joinForm.jerseyNumber ? Number(joinForm.jerseyNumber) : undefined }, { onSuccess: () => setShowJoin(false) }); };
+  const changeLanguage = (next: string) => { setLanguage(next); document.documentElement.lang = next; document.documentElement.dir = next === "ar" || next === "fa" || next === "ur" ? "rtl" : "ltr"; };
+  useEffect(() => { document.documentElement.lang = "ar"; document.documentElement.dir = "rtl"; }, []);
 
   return <div className="football-app" dir="rtl">
-    <header className="football-header"><div className="football-brand" onClick={() => { setView("home"); setSelected(null); }}><div className="brand-orbit"><Sparkles size={19} /></div><div><b>كوكبة</b><span>PLAYERS UNIVERSE</span></div></div><nav><button className={view === "home" ? "nav-active" : ""} onClick={() => { setView("home"); setSelected(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>اكتشف اللاعبين</button><button onClick={() => document.getElementById("players")?.scrollIntoView({ behavior: "smooth" })}>المتصدرون</button><button onClick={() => document.querySelector(".join-banner")?.scrollIntoView({ behavior: "smooth" })}>عن كوكبة</button></nav><div className="header-actions"><button className="lang-btn"><Globe2 size={15} /> AR <ChevronLeft size={13} /></button><button className="login-btn" onClick={openJoin}>دخول اللاعبين <ArrowLeft size={15} /></button></div></header>
+    <header className="football-header"><div className="football-brand" onClick={() => { setView("home"); setSelected(null); }}><div className="brand-orbit"><Sparkles size={19} /></div><div><b>كوكبة</b><span>PLAYERS UNIVERSE</span></div></div><nav><button className={view === "home" ? "nav-active" : ""} onClick={() => { setView("home"); setSelected(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>اكتشف اللاعبين</button><button onClick={() => document.getElementById("players")?.scrollIntoView({ behavior: "smooth" })}>المتصدرون</button><button onClick={() => document.querySelector(".join-banner")?.scrollIntoView({ behavior: "smooth" })}>عن كوكبة</button></nav><div className="header-actions"><div className="language-picker"><Globe2 size={15} /><button className={language === "en" ? "language-active" : ""} onClick={() => changeLanguage("en")}>EN</button><button className={language === "ar" ? "language-active" : ""} onClick={() => changeLanguage("ar")}>عربي</button><select aria-label="اختر اللغة" value={language === "en" || language === "ar" ? "" : language} onChange={(e) => e.target.value && changeLanguage(e.target.value)}><option value="" hidden>لغات</option>{languages.slice(2).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></div><button className="login-btn" onClick={openJoin}>دخول اللاعبين <ArrowLeft size={15} /></button></div></header>
     {view === "home" ? <main>
       <section className="football-hero"><div className="hero-copy"><div className="eyebrow"><span /> 100+ من نجوم العالم هنا <span /></div><h1>الملعب الذي<br /><em>يتحدث فيه النجوم.</em></h1><p>كوكبة هي المساحة الرقمية الخاصة بلاعبي كرة القدم. اكتشف ما يكتبه نجومك، تابع أرقامهم، وكن قريباً من لحظاتهم خارج الملعب.</p><div className="hero-actions"><button className="hero-cta" onClick={() => document.getElementById("players")?.scrollIntoView({ behavior: "smooth" })}>استكشف اللاعبين <ArrowLeft size={17} /></button><span className="hero-note"><Shield size={15} /> ملفات موثقة للاعبين فقط</span></div></div><div className="hero-art"><div className="hero-grid" /><div className="hero-ball">⚽</div><div className="hero-orb orb-a" /><div className="hero-orb orb-b" /><span className="hero-tag tag-one">100+ / 01</span><span className="hero-tag tag-two">THE PLAYERS UNIVERSE</span></div></section>
       <section className="trust-strip"><div><Users size={18} /><span><b>{players.length}</b> لاعباً في الكتالوج الأول</span></div><div><BadgeCheck size={18} /><span>حسابات موثقة للاعبين</span></div><div><Globe2 size={18} /><span>منصة عالمية متعددة اللغات</span></div><div><Trophy size={18} /><span>أرقام وميداليات حقيقية</span></div></section>
