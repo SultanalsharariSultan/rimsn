@@ -1,3 +1,4 @@
+import { playerImages } from "./playerImages";
 export type Player = {
   id: string;
   name: string;
@@ -31,7 +32,7 @@ const corePlayers: Player[] = [
 ];
 
 const makePlayer = (id: string, name: string, nameEn: string, country: string, position: string, number: number, club: string, color: string): Player => ({
-  id, name, nameEn, country, position, number, club, color, image: avatar(nameEn), stats: { goals: "—", assists: "—", trophies: "—", followers: "—" }, medals: ["ملف لاعب قيد التوثيق"]
+  id, name, nameEn, country, position, number, club, color, image: playerImages[id] ?? avatar(nameEn), stats: { goals: "—", assists: "—", trophies: "—", followers: "—" }, medals: ["ملف لاعب قيد التوثيق"]
 });
 
 const extendedPlayers: Player[] = [
@@ -127,7 +128,7 @@ const extendedPlayers: Player[] = [
   makePlayer("aymen-hussein", "أيمن حسين", "Aymen Hussein", "العراق", "مهاجم", 18, "الخور", "#d2a95a"),
 ];
 
-export const players: Player[] = [...corePlayers, ...extendedPlayers];
+export const players: Player[] = [...corePlayers, ...extendedPlayers].map((player) => ({ ...player, image: playerImages[player.id] ?? player.image }));
 
 export const samplePosts: Record<string, string[]> = {
   ronaldo: ["العمل، الإيمان، والاستمرارية. لا شيء يأتي من دون تضحيات.", "فخور بكل لحظة أرتدي فيها قميص بلادي. القادم أجمل.", "شكراً لجماهير النصر على الطاقة التي تمنحونها لنا كل يوم."],
