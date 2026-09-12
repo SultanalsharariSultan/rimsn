@@ -1,145 +1,47 @@
-import { AIChatBox, type Message as ChatMessage } from "@/components/AIChatBox";
-import { startLogin } from "@/const";
-import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
-import { cn } from "@/lib/utils";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, ChevronDown, CircleHelp, Clock3, Copy, Database, FileText, Globe2, LogOut, Menu, MoreHorizontal, Plus, Search, Settings2, ShieldCheck, Sparkles, Trash2, UserRound, X, Zap } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Check, ChevronDown, CircleHelp, ExternalLink, FileText, Heart, LogIn, LogOut, MessageCircle, MousePointer2, RefreshCw, Search, ShieldCheck, Sparkles, Trash2, Twitter, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 
-const suggestedPrompts = [
-  "لخّص لي فكرة مشروعي في خطة عملية من خمس خطوات",
-  "اكتب لي صفحة هبوط عربية بأسلوب احترافي",
-  "اشرح لي الفرق بين قاعدة البيانات العلائقية وغير العلائقية",
-];
+type Post = { id: string; text: string; createdAt?: string; isReply: boolean };
+type Scan = { user: { id: string; name: string; username: string; profile_image_url?: string }; posts: Post[]; likedPosts: Post[]; counts: { posts: number; replies: number; likes: number } };
 
-type ProviderId = "orbit-auto" | "openai" | "claude" | "gemini";
+const api = async <T,>(url: string, init?: RequestInit) => { const response = await fetch(url, { credentials: "include", ...init }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.error || data.message || "تعذر إكمال العملية"); return data as T; };
 
-const providerMeta: Record<string, { name: string; short: string; icon: string; tone: string }> = {
-  "orbit-auto": { name: "مدار تلقائي", short: "AUTO", icon: "✦", tone: "teal" },
-  openai: { name: "OpenAI", short: "GPT", icon: "◌", tone: "mint" },
-  claude: { name: "Claude", short: "CL", icon: "◈", tone: "amber" },
-  gemini: { name: "Gemini", short: "GE", icon: "✧", tone: "violet" },
-};
-
-function Brand() {
-  return <div className="app-brand"><div className="brand-mark"><Sparkles size={18} strokeWidth={2.4} /></div><div><strong>مدار</strong><span>AI ORBIT</span></div></div>;
-}
-
-function UserBadge({ name }: { name?: string | null }) {
-  const letters = (name || "زائر").split(" ").slice(0, 2).map((part) => part[0]).join("");
-  return <div className="user-badge"><span>{letters || "ز"}</span><div><b>{name || "زائر"}</b><small>{name ? "الحساب الشخصي" : "سجّل للبدء"}</small></div></div>;
-}
+function Brand() { return <div className="clean-brand"><div className="clean-mark"><Sparkles size={17} /></div><div><b>ممحاة</b><span>X CLEANER</span></div></div>; }
+function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number | string }) { return <div className="clean-stat"><span>{icon}</span><div><b>{value}</b><small>{label}</small></div></div>; }
 
 export default function Home() {
-  const { user, loading: authLoading, isAuthenticated, logout } = useAuth();
-  const utils = trpc.useUtils();
-  const providersQuery = trpc.ai.providers.useQuery();
-  const conversationsQuery = trpc.ai.conversations.useQuery(undefined, { enabled: isAuthenticated, refetchOnWindowFocus: false });
-  const [selectedProvider, setSelectedProvider] = useState<ProviderId>("orbit-auto");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
-  const [showProviders, setShowProviders] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [status, setStatus] = useState<{ configured: boolean; connected: boolean }>({ configured: false, connected: false });
+  const [scan, setScan] = useState<Scan | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [filter, setFilter] = useState<"all" | "replies" | "likes">("all");
   const [search, setSearch] = useState("");
-  const createdRef = useRef(false);
+  const [limit, setLimit] = useState(100);
+  const [busy, setBusy] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
 
-  const conversations = conversationsQuery.data ?? [];
-  const selectedConversation = conversations.find((item) => item.id === selectedId) ?? null;
-  const conversationQuery = trpc.ai.conversation.useQuery({ id: selectedId ?? 0 }, { enabled: Boolean(selectedId), refetchOnWindowFocus: false });
-  const createMutation = trpc.ai.create.useMutation();
-  const sendMutation = trpc.ai.send.useMutation();
-  const removeMutation = trpc.ai.remove.useMutation();
+  const loadStatus = () => api<{ configured: boolean; connected: boolean }>("/api/x/status").then(setStatus).catch(() => undefined);
+  useEffect(() => { loadStatus(); }, []);
+  const visible = useMemo(() => (filter === "likes" ? (scan?.likedPosts ?? []) : (scan?.posts ?? []).filter((post) => filter === "all" || post.isReply)).filter((post) => post.text.toLowerCase().includes(search.toLowerCase())).slice(0, limit), [filter, limit, scan, search]);
 
-  useEffect(() => {
-    if (!selectedId && conversations.length > 0) setSelectedId(conversations[0].id);
-  }, [conversations, selectedId]);
+  const connect = () => { window.location.href = "/api/x/login"; };
+  const scanAccount = async () => { setBusy(true); try { const data = await api<Scan>("/api/x/scan"); setScan(data); setSelected([]); toast.success(`تم العثور على ${data.counts.posts} منشور`); } catch (error) { toast.error(error instanceof Error ? error.message : "تعذر الفحص"); } finally { setBusy(false); } };
+  const toggle = (id: string) => setSelected((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  const selectVisible = () => setSelected((current) => current.length === visible.length ? [] : visible.map((post) => post.id));
+  const deleteSelected = async () => { if (confirmText !== "حذف") return; setBusy(true); try { const endpoint = filter === "likes" ? "/api/x/unlike" : "/api/x/delete"; const result = await api<{ deleted: number; failed: number }>(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ids: selected }) }); toast.success(filter === "likes" ? `تمت إزالة ${result.deleted} إعجاب` : `تم حذف ${result.deleted} منشور${result.failed ? `، وفشل ${result.failed}` : ""}`); setShowDelete(false); setConfirmText(""); await scanAccount(); } catch (error) { toast.error(error instanceof Error ? error.message : "تعذر تنفيذ العملية"); } finally { setBusy(false); } };
 
-  useEffect(() => {
-    if (conversationQuery.data?.messages) {
-      setLocalMessages(conversationQuery.data.messages.filter((message) => message.role !== "system").map((message) => ({ role: message.role as "user" | "assistant", content: message.content })));
-    }
-  }, [conversationQuery.data]);
-
-  useEffect(() => {
-    if (isAuthenticated && !authLoading && conversationsQuery.isFetched && conversations.length === 0 && !createdRef.current) {
-      createdRef.current = true;
-      createMutation.mutate({ provider: selectedProvider }, { onSuccess: (result) => setSelectedId(result.id) });
-    }
-  }, [authLoading, conversations.length, conversationsQuery.isFetched, createMutation, isAuthenticated, selectedProvider]);
-
-  const activeProvider = { ...(providerMeta[selectedProvider] ?? providerMeta["orbit-auto"]), model: providersQuery.data?.find((provider) => provider.id === selectedProvider)?.model ?? "نموذج مدار سريع" };
-  const filteredConversations = useMemo(() => conversations.filter((item) => item.title.toLowerCase().includes(search.toLowerCase())), [conversations, search]);
-  const canChat = isAuthenticated && Boolean(selectedId);
-
-  const selectConversation = (id: number) => {
-    setSelectedId(id);
-    setLocalMessages([]);
-    setShowSidebar(false);
-  };
-
-  const newConversation = async () => {
-    if (!isAuthenticated) return startLogin();
-    const result = await createMutation.mutateAsync({ provider: selectedProvider });
-    setSelectedId(result.id);
-    setLocalMessages([]);
-    await utils.ai.conversations.invalidate();
-    setShowSidebar(false);
-  };
-
-  const sendMessage = async (content: string) => {
-    if (!isAuthenticated) {
-      toast.info("سجّل الدخول أولًا لحفظ محادثاتك واستخدام المدار");
-      return startLogin();
-    }
-    let conversationId = selectedId;
-    if (!conversationId) {
-      const created = await createMutation.mutateAsync({ provider: selectedProvider });
-      conversationId = created.id;
-      setSelectedId(conversationId);
-    }
-    setLocalMessages((previous) => [...previous, { role: "user", content }]);
-    try {
-      const result = await sendMutation.mutateAsync({ conversationId, content, provider: selectedProvider });
-      setLocalMessages((previous) => [...previous, { role: "assistant", content: result.content }]);
-      await utils.ai.conversations.invalidate();
-      await utils.ai.conversation.invalidate({ id: conversationId });
-    } catch (error) {
-      setLocalMessages((previous) => [...previous, { role: "assistant", content: `تعذّر إكمال الطلب. ${error instanceof Error ? error.message : "تحقق من إعدادات المزود."}` }]);
-    }
-  };
-
-  const deleteCurrent = async () => {
-    if (!selectedId) return;
-    await removeMutation.mutateAsync({ id: selectedId });
-    setSelectedId(null);
-    setLocalMessages([]);
-    await utils.ai.conversations.invalidate();
-  };
-
-  return (
-    <div className="orbit-app" dir="rtl">
-      <aside className={cn("orbit-sidebar", showSidebar && "is-open")}>
-        <div className="sidebar-head"><Brand /><button className="icon-btn mobile-only" onClick={() => setShowSidebar(false)} aria-label="إغلاق القائمة"><X size={18} /></button></div>
-        <button className="new-chat-btn" onClick={newConversation}><Plus size={17} /><span>محادثة جديدة</span><kbd>N</kbd></button>
-        <div className="sidebar-section"><div className="section-label"><span>محادثاتك</span><button className="tiny-btn"><MoreHorizontal size={15} /></button></div><div className="search-box"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث في المحادثات" /></div></div>
-        <div className="conversation-list">{filteredConversations.length === 0 ? <div className="empty-conversations"><Clock3 size={17} /><span>لا توجد محادثات محفوظة بعد</span></div> : filteredConversations.map((conversation) => <button key={conversation.id} onClick={() => selectConversation(conversation.id)} className={cn("conversation-item", conversation.id === selectedId && "active")}><span className="conversation-dot" /><span className="conversation-title">{conversation.title}</span><small>{conversation.model === "orbit-auto" ? "مدار" : conversation.model}</small></button>)}</div>
-        <div className="sidebar-bottom"><button className={cn("sidebar-link", showSettings && "selected")} onClick={() => setShowSettings((value) => !value)}><Settings2 size={17} /><span>إعدادات المزود</span></button><button className="sidebar-link"><CircleHelp size={17} /><span>كيف يعمل مدار؟</span></button><div className="profile-row"><UserBadge name={user?.name} /><button className="logout-btn" onClick={() => isAuthenticated ? logout() : startLogin()} aria-label={isAuthenticated ? "تسجيل الخروج" : "تسجيل الدخول"}>{isAuthenticated ? <LogOut size={16} /> : <UserRound size={16} />}</button></div></div>
-      </aside>
-
-      <section className="orbit-main">
-        <header className="main-header"><div className="mobile-head"><button className="icon-btn" onClick={() => setShowSidebar(true)} aria-label="فتح القائمة"><Menu size={20} /></button><Brand /></div><div className="breadcrumb"><span>مساحتك</span><i>/</i><b>{selectedConversation?.title || "محادثة جديدة"}</b></div><div className="header-actions"><div className="status-pill"><span className="status-dot" /> النظام يعمل</div><button className="avatar-mini"><span>{(user?.name || "ز").slice(0, 1)}</span></button></div></header>
-        <div className="workspace">
-          <div className="workspace-top"><div><div className="overline"><span className="overline-line" /> مساحة المحادثة</div><h1>{selectedConversation?.title || "ابدأ بسؤالٍ واضح"}</h1><p>فكّر بصوت عالٍ. مدار يرتّب الفكرة معك.</p></div><div className="top-controls"><button className="outline-btn" onClick={deleteCurrent} disabled={!selectedId || removeMutation.isPending}><Trash2 size={15} /> حذف</button><button className="model-select" onClick={() => setShowProviders((value) => !value)}><span className={`provider-dot ${activeProvider.tone}`}>{activeProvider.icon}</span><span>{activeProvider.name}</span><ChevronDown size={15} /></button></div></div>
-          {showProviders && <div className="provider-popover">{(providersQuery.data ?? []).map((provider) => { const meta = providerMeta[provider.id] ?? providerMeta["orbit-auto"]; return <button key={provider.id} className={cn("provider-option", selectedProvider === provider.id && "active")} onClick={() => { setSelectedProvider(provider.id); setShowProviders(false); }}><span className={`provider-dot ${meta.tone}`}>{meta.icon}</span><div><b>{meta.name}</b><small>{provider.description}</small></div>{provider.id === "orbit-auto" && <em>جاهز</em>}</button>; })}</div>}
-          <div className="chat-frame"><div className="chat-head"><div className="chat-context"><div className={`provider-dot large ${activeProvider.tone}`}>{activeProvider.icon}</div><div><b>{activeProvider.name}</b><span>{activeProvider.model || "نموذج سريع للمحادثة"}</span></div></div><div className="chat-head-note"><ShieldCheck size={14} /> محادثة خاصة</div></div>{!canChat && !authLoading ? <div className="auth-callout"><div className="auth-orbit"><Sparkles size={23} /></div><h2>مساعدك الذكي، في مدارك</h2><p>سجّل الدخول لحفظ محادثاتك، التبديل بين النماذج، واستكمال أفكارك من أي جهاز.</p><button className="primary-btn" onClick={startLogin}>تسجيل الدخول والمتابعة <span>←</span></button><div className="auth-features"><span><Database size={14} /> سجل محادثات دائم</span><span><Globe2 size={14} /> نماذج متعددة</span><span><ShieldCheck size={14} /> مفاتيحك تبقى سرية</span></div></div> : <AIChatBox messages={localMessages} onSendMessage={sendMessage} isLoading={sendMutation.isPending || createMutation.isPending} height="100%" emptyStateMessage="ما الذي تريد أن نبنيه اليوم؟" suggestedPrompts={suggestedPrompts} placeholder="اكتب رسالتك إلى مدار..." />}</div>
-          <div className="workspace-footer"><span><Zap size={14} /> إجابات مدعومة بنماذج حديثة</span><span>Enter للإرسال · Shift + Enter لسطر جديد</span></div>
-        </div>
-      </section>
-
-      {showSettings && <div className="settings-drawer"><div className="drawer-head"><div><div className="overline"><span className="overline-line" /> الإعدادات</div><h2>مزودو الذكاء الاصطناعي</h2></div><button className="icon-btn" onClick={() => setShowSettings(false)}><X size={18} /></button></div><p className="drawer-intro">يعمل «مدار تلقائي» مباشرة داخل المعاينة. عند الاستضافة، أضف مفاتيحك كمتغيرات سرية لتفعيل المزودين الرسميين.</p><div className="key-status"><div><span className="status-dot" /><b>المدار المدمج</b><small>متصل الآن</small></div><ShieldCheck size={19} /></div>{["openai", "claude", "gemini"].map((id) => { const meta = providerMeta[id]; return <div className="key-row" key={id}><div className={`provider-dot ${meta.tone}`}>{meta.icon}</div><div><b>{meta.name}</b><small>{id === "openai" ? "OPENAI_API_KEY" : id === "claude" ? "ANTHROPIC_API_KEY" : "GEMINI_API_KEY"}</small></div><span className="not-configured">غير مهيأ</span></div>; })}<div className="drawer-note"><FileText size={16} /><span>لا تضع المفتاح داخل الواجهة أو GitHub. أضفه من Secrets في لوحة الاستضافة.</span></div></div>}
-      {showSidebar && <button className="sidebar-scrim" onClick={() => setShowSidebar(false)} aria-label="إغلاق القائمة" />}
-    </div>
-  );
+  return <div className="clean-app" dir="rtl">
+    <header className="clean-header"><Brand /><nav><a className="active">لوحة التحكم</a><a>سجل العمليات</a><a>المساعدة <CircleHelp size={14} /></a></nav><div className="clean-account">{scan?.user ? <><img src={scan.user.profile_image_url} /><span>@{scan.user.username}</span><button onClick={() => api("/api/x/disconnect", { method: "POST" }).then(() => { setStatus({ configured: status.configured, connected: false }); setScan(null); })}><LogOut size={15} /></button></> : <span className="secure-mini"><ShieldCheck size={14} /> لا نحفظ كلمة المرور</span>}</div></header>
+    <main className="clean-shell">
+      <div className="clean-hero"><div><div className="clean-overline"><span /> أداة تنظيف حسابك</div><h1>نظّف حساب X<br /><em>بهدوء، وبنقرة واعية.</em></h1><p>اعرض منشوراتك وردودك أولًا، حدد ما تريد، ثم نفّذ الحذف وأنت ترى بالضبط ما سيحدث.</p></div><div className="hero-orbit"><div className="orbit-ring ring-one" /><div className="orbit-ring ring-two" /><Twitter size={42} /></div></div>
+      {!status.connected ? <section className="connect-card"><div className="connect-icon"><LogIn size={23} /></div><div className="connect-copy"><h2>اربط حساب X للبدء</h2><p>ستنتقل إلى X لتسجيل الدخول والموافقة على الصلاحيات. لن نرى كلمة المرور، ويمكنك فصل الحساب في أي وقت.</p><div className="scope-row"><span><ShieldCheck size={13} /> OAuth آمن</span><span><FileText size={13} /> معاينة قبل الحذف</span><span><MousePointer2 size={13} /> تحكم كامل</span></div></div><button className="clean-primary" onClick={connect} disabled={!status.configured}><span>{status.configured ? "تسجيل الدخول عبر X" : "إعداد X OAuth مطلوب"}</span>{status.configured ? <ExternalLink size={16} /> : <AlertTriangle size={16} />}</button>{!status.configured && <small className="setup-hint">أضف X_CLIENT_ID و X_REDIRECT_URI في Secrets أولًا.</small>}</section> : <>
+        <section className="clean-toolbar"><div className="user-summary"><div className="user-avatar">{scan?.user ? <img src={scan.user.profile_image_url} /> : <UserRound size={19} />}</div><div><b>{scan?.user ? scan.user.name : "حساب X متصل"}</b><small>{scan?.user ? `@${scan.user.username}` : "اضغط فحص الحساب لقراءة المنشورات"}</small></div></div><div className="toolbar-actions"><button className="clean-secondary" onClick={scanAccount} disabled={busy}><RefreshCw size={15} className={busy ? "spin" : ""} /> فحص الحساب</button><button className="clean-secondary danger-text" onClick={() => api("/api/x/disconnect", { method: "POST" }).then(() => { setStatus({ configured: status.configured, connected: false }); setScan(null); })}><LogOut size={15} /> فصل الحساب</button></div></section>
+        <section className="stats-grid"><Stat icon={<FileText size={17} />} label="كل المنشورات" value={scan?.counts.posts ?? "—"} /><Stat icon={<MessageCircle size={17} />} label="الردود" value={scan?.counts.replies ?? "—"} /><Stat icon={<Heart size={17} />} label="الإعجابات" value={scan?.counts.likes ?? "—"} /><div className="privacy-note"><ShieldCheck size={19} /><span><b>خصوصيتك أولًا</b><small>التوكن مشفّر ولا نعرضه للمتصفح</small></span></div></section>
+        <section className="posts-card"><div className="posts-head"><div><h2>{filter === "likes" ? "إعجاباتك" : "منشوراتك"}</h2><span>{selected.length ? `تم تحديد ${selected.length}` : filter === "likes" ? "حدد الإعجابات التي تريد إزالتها" : "حدد العناصر التي تريد حذفها"}</span></div><div className="posts-controls"><div className="clean-search"><Search size={14} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث في النص..." /></div><select value={filter} onChange={(event) => { setFilter(event.target.value as "all" | "replies" | "likes"); setSelected([]); }}><option value="all">كل المنشورات</option><option value="replies">الردود فقط</option><option value="likes">الإعجابات</option></select><select value={limit} onChange={(event) => setLimit(Number(event.target.value))}><option value={10}>أول 10</option><option value={100}>أول 100</option><option value={1000}>أول 1000</option></select></div></div><div className="select-all"><label><input type="checkbox" checked={visible.length > 0 && selected.length === visible.length} onChange={selectVisible} /><span>تحديد الظاهر</span></label><small>{visible.length} نتيجة</small></div><div className="post-list">{!scan ? <div className="empty-clean"><RefreshCw size={22} /><p>اضغط «فحص الحساب» لعرض منشوراتك هنا</p></div> : visible.length === 0 ? <div className="empty-clean"><Search size={22} /><p>لم نجد منشورات تطابق البحث</p></div> : visible.map((post) => <label className={`post-row ${selected.includes(post.id) ? "picked" : ""}`} key={post.id}><input type="checkbox" checked={selected.includes(post.id)} onChange={() => toggle(post.id)} /><div className="post-content"><p>{post.text}</p><small>{filter === "likes" ? "إعجاب" : post.isReply ? "رد" : "منشور"} · {post.createdAt ? new Date(post.createdAt).toLocaleDateString("ar") : ""}</small></div><span className="post-id">#{post.id.slice(-6)}</span></label>)}</div>{selected.length > 0 && <div className="bulk-bar"><span><Check size={16} /> {selected.length} {filter === "likes" ? "إعجاب محدد" : "منشور محدد"}</span><button className="delete-btn" onClick={() => setShowDelete(true)}><Trash2 size={15} /> {filter === "likes" ? "إزالة الإعجاب" : "حذف المحدد"}</button></div>}</section>
+      </>}
+      <footer className="clean-footer"><span>ممحاة X © 2026</span><span>الحذف نهائي وقد يستغرق وقتًا حسب حدود X API</span><span><ShieldCheck size={13} /> لا نبيع بياناتك</span></footer>
+    </main>
+    {showDelete && <div className="modal-backdrop"><div className="delete-modal"><div className="modal-alert"><AlertTriangle size={23} /></div><h2>{filter === "likes" ? "تأكيد إزالة الإعجاب" : "تأكيد الحذف النهائي"}</h2><p>أنت على وشك {filter === "likes" ? "إزالة" : "حذف"} <b>{selected.length} {filter === "likes" ? "إعجاب" : "منشور"}</b> من حساب X. هذا الإجراء قد لا يمكن التراجع عنه.</p><div className="modal-warning">للتأكيد، اكتب كلمة <b>حذف</b> في الحقل أدناه.</div><input autoFocus value={confirmText} onChange={(event) => setConfirmText(event.target.value)} placeholder="اكتب: حذف" /><div className="modal-actions"><button className="clean-secondary" onClick={() => { setShowDelete(false); setConfirmText(""); }}>إلغاء</button><button className="delete-btn" disabled={confirmText !== "حذف" || busy} onClick={deleteSelected}><Trash2 size={15} /> تأكيد العملية</button></div></div></div>}
+  </div>;
 }

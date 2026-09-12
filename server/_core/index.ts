@@ -8,6 +8,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { xCallback, xDelete, xDisconnect, xLogin, xScan, xStatus, xUnlike } from "../x";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -36,6 +37,13 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  app.get("/api/x/status", (req, res) => res.json(xStatus(req)));
+  app.get("/api/x/login", (req, res) => { try { xLogin(req, res); } catch (error) { res.status(503).send(error instanceof Error ? error.message : "X OAuth غير مهيأ"); } });
+  app.get("/api/x/callback", (req, res) => { xCallback(req, res).catch((error) => res.status(502).send(error instanceof Error ? error.message : "X OAuth callback failed")); });
+  app.post("/api/x/disconnect", (req, res) => xDisconnect(req, res));
+  app.get("/api/x/scan", (req, res) => { xScan(req).then((data) => res.json(data)).catch((error) => res.status(502).json({ error: error instanceof Error ? error.message : "تعذر فحص الحساب" })); });
+  app.post("/api/x/delete", (req, res) => { xDelete(req).then((data) => res.json(data)).catch((error) => res.status(502).json({ error: error instanceof Error ? error.message : "تعذر تنفيذ الحذف" })); });
+  app.post("/api/x/unlike", (req, res) => { xUnlike(req).then((data) => res.json(data)).catch((error) => res.status(502).json({ error: error instanceof Error ? error.message : "تعذر إزالة الإعجاب" })); });
   // tRPC API
   app.use(
     "/api/trpc",
