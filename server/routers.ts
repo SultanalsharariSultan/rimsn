@@ -13,6 +13,13 @@ import {
   getConversationMessages,
   listConversations,
   updateConversation,
+  createPlayerPost,
+  createPlayerProfile,
+  getPlayerByUserId,
+  getPlayerProfile,
+  listPlayerPosts,
+  listVerifiedPlayers,
+  reviewPlayerProfile,
 } from "./db";
 
 const providerSchema = z.enum(["orbit-auto", "openai", "claude", "gemini"]);
@@ -75,6 +82,34 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_GATEWAY", message: error instanceof Error ? error.message : "تعذر الاتصال بنموذج الذكاء الاصطناعي" });
         }
       }),
+  }),
+  players: router({
+    verified: publicProcedure.query(() => listVerifiedPlayers()),
+    profile: publicProcedure.input(z.object({ slug: z.string().min(1).max(120) })).query(async ({ input }) => {
+      const profile = await getPlayerProfile(input.slug);
+      if (!profile || profile.status !== "verified") throw new TRPCError({ code: "NOT_FOUND", message: "ملف اللاعب غير متاح" });
+      return { profile, posts: await listPlayerPosts(profile.id) };
+    }),
+    myProfile: protectedProcedure.query(({ ctx }) => getPlayerByUserId(ctx.user.id)),
+    register: protectedProcedure.input(z.object({ displayName: z.string().trim().min(2).max(160), nameEn: z.string().trim().max(160).optional(), country: z.string().trim().min(2).max(100), club: z.string().trim().max(160).optional(), position: z.string().trim().max(60).optional(), jerseyNumber: z.number().int().min(0).max(99).optional(), imageUrl: z.string().url().max(1000).optional(), bio: z.string().trim().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+      const existing = await getPlayerByUserId(ctx.user.id);
+      if (existing) throw new TRPCError({ code: "CONFLICT", message: "لديك طلب لاعب موجود بالفعل" });
+      const slug = `${input.displayName.toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, "-").replace(/^-|-$/g, "")}-${ctx.user.id}`;
+      const id = await createPlayerProfile({ ...input, userId: ctx.user.id, slug, status: "pending" });
+      if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير مهيأة" });
+      return { id, status: "pending" as const };
+    }),
+    post: protectedProcedure.input(z.object({ body: z.string().trim().min(1).max(5000) })).mutation(async ({ ctx, input }) => {
+      const profile = await getPlayerByUserId(ctx.user.id);
+      if (!profile || profile.status !== "verified") throw new TRPCError({ code: "FORBIDDEN", message: "الكتابة متاحة للاعب الموثق فقط" });
+      const id = await createPlayerPost(profile.id, input.body);
+      return { id };
+    }),
+    review: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["verified", "rejected"]) })).mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "المراجعة للإدارة فقط" });
+      await reviewPlayerProfile(input.id, input.status);
+      return { success: true } as const;
+    }),
   }),
 });
 
