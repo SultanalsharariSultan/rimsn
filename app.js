@@ -1,46 +1,8 @@
-const toast = document.querySelector('.toast');
-let toastTimer;
-function showToast(message) {
-  toast.textContent = message;
-  toast.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
-}
-
-document.querySelectorAll('.pill').forEach((pill) => {
-  pill.addEventListener('click', () => {
-    document.querySelectorAll('.pill').forEach((item) => item.classList.remove('active'));
-    pill.classList.add('active');
-    const filter = pill.dataset.filter;
-    document.querySelectorAll('.product-card').forEach((card) => {
-      card.classList.toggle('hidden', filter !== 'all' && card.dataset.category !== filter);
-    });
-  });
-});
-
-let cartItems = 0;
-document.querySelectorAll('.add-cart').forEach((button) => {
-  button.addEventListener('click', () => {
-    cartItems += 1;
-    const count = document.querySelector('.cart-count');
-    count.textContent = cartItems;
-    count.style.display = 'flex';
-    button.innerHTML = 'تمت الإضافة ✓';
-    button.style.background = 'rgba(98,230,224,.12)';
-    button.style.color = 'var(--cyan)';
-    showToast('تمت إضافة المنتج إلى سلتك');
-  });
-});
-
-document.querySelectorAll('a[href^="#"]').forEach((link) => {
-  link.addEventListener('click', (event) => {
-    const target = document.querySelector(link.getAttribute('href'));
-    if (!target && link.getAttribute('href') !== '#top') {
-      event.preventDefault();
-      showToast('هذه الصفحة ستكون متاحة قريباً');
-    }
-  });
-});
-
-document.querySelector('.icon-button[aria-label="تبديل اللغة"]').addEventListener('click', () => showToast('English experience is coming soon'));
-document.querySelector('.menu-button').addEventListener('click', () => showToast('القائمة المتنقلة قيد التجهيز'));
+const toast=document.querySelector('.toast');let toastTimer;function showToast(message){toast.textContent=message;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2800)}
+let cartItems=0;document.querySelectorAll('.pill').forEach(pill=>pill.addEventListener('click',()=>{document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));pill.classList.add('active');const filter=pill.dataset.filter;document.querySelectorAll('.product-card').forEach(card=>card.classList.toggle('hidden',filter!=='all'&&card.dataset.category!==filter))}));document.querySelectorAll('.add-cart').forEach(button=>button.addEventListener('click',()=>{cartItems++;document.querySelector('.cart-count').textContent=cartItems;document.querySelector('.cart-count').style.display='flex';button.textContent='تمت الإضافة ✓';button.style.color='var(--cyan)';showToast('تمت إضافة المنتج إلى سلتك')}));
+const modal=document.querySelector('#authModal'),form=document.querySelector('#authForm'),title=document.querySelector('#authTitle'),subtitle=document.querySelector('#authSubtitle'),nameField=document.querySelector('#nameField'),submit=form.querySelector('.submit-auth'),success=document.querySelector('#authSuccess');let mode='login';const sessionKey='rimsn_session';
+function openAuth(next='login'){mode=next;modal.classList.add('open');modal.setAttribute('aria-hidden','false');setMode(mode);setTimeout(()=>form.email.focus(),50)}function closeAuth(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true');form.reset();success.hidden=true;form.hidden=false;document.querySelector('.forgot-link').hidden=false}function setMode(next){mode=next;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('selected',x.dataset.mode===mode));const signup=mode==='signup';nameField.style.display=signup?'block':'none';nameField.classList.toggle('optional',!signup);nameField.querySelector('input').required=signup;title.textContent=signup?'اصنع حسابك.':'أهلاً بعودتك.';subtitle.textContent=signup?'ابدأ ببناء مستقبلك الرقمي.':'سجّل الدخول لتكمل رحلتك.';submit.innerHTML=signup?'إنشاء الحساب <span>↗</span>':'تسجيل الدخول <span>↗</span>';form.password.autocomplete=signup?'new-password':'current-password'}
+document.querySelectorAll('[data-auth]').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();openAuth(button.dataset.auth)}));document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>setMode(button.dataset.mode)));document.querySelector('.modal-close').addEventListener('click',closeAuth);modal.addEventListener('click',e=>{if(e.target===modal)closeAuth()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('open'))closeAuth()});
+form.addEventListener('submit',e=>{e.preventDefault();const data=Object.fromEntries(new FormData(form));const users=JSON.parse(localStorage.getItem('rimsn_users')||'[]');if(mode==='signup'){if(users.some(u=>u.email===data.email)){showToast('هذا البريد مسجل بالفعل');return}users.push({name:data.name,email:data.email,password:data.password});localStorage.setItem('rimsn_users',JSON.stringify(users));localStorage.setItem(sessionKey,JSON.stringify({name:data.name,email:data.email}));showSuccess(`مرحباً ${data.name} — تم إنشاء حسابك بنجاح.`)}else{const user=users.find(u=>u.email===data.email&&u.password===data.password);if(!user){showToast('البريد الإلكتروني أو كلمة المرور غير صحيحة');return}localStorage.setItem(sessionKey,JSON.stringify({name:user.name,email:user.email}));showSuccess(`مرحباً بعودتك ${user.name}.` )}});function showSuccess(message){form.hidden=true;document.querySelector('.forgot-link').hidden=true;success.textContent=message;success.hidden=false;setTimeout(closeAuth,2200)}
+document.querySelector('#forgotPassword').addEventListener('click',()=>{const email=window.prompt('أدخل بريدك الإلكتروني لاستعادة كلمة المرور:');if(email&&email.includes('@'))showToast('تم إرسال رابط الاستعادة إلى بريدك (وضع المعاينة)');else if(email)showToast('يرجى إدخال بريد إلكتروني صحيح')});document.querySelector('#languageButton').addEventListener('click',()=>showToast('تجربة English ستتوفر قريباً'));document.querySelector('.menu-button').addEventListener('click',()=>showToast('استخدم الروابط للتنقل في النسخة المتجاوبة'));document.querySelector('.cart-button').addEventListener('click',()=>showToast(cartItems?`لديك ${cartItems} منتج في السلة`:'سلتك فارغة'));
+const existing=JSON.parse(localStorage.getItem(sessionKey)||'null');if(existing){const loginButton=document.querySelector('[data-auth="login"]');loginButton.textContent=`مرحباً، ${existing.name.split(' ')[0]}`;loginButton.addEventListener('click',()=>{localStorage.removeItem(sessionKey);location.reload()})}

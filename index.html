@@ -1,64 +1,33 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="RIMSN — سوق عالمي للمنتجات الرقمية المصممة للمبدعين والمطورين." />
-    <meta name="theme-color" content="#080b16" />
-    <title>RIMSN — ابنِ المستقبل</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <div class="site-shell">
-      <div class="ambient ambient-one"></div>
-      <div class="ambient ambient-two"></div>
-      <header class="topbar container">
-        <a class="brand" href="#top" aria-label="RIMSN home"><span class="brand-mark">R</span><span>RIMSN</span></a>
-        <nav class="desktop-nav" aria-label="التنقل الرئيسي">
-          <a class="active" href="#explore">استكشف</a>
-          <a href="#categories">التصنيفات</a>
-          <a href="#creators">للمبدعين</a>
-        </nav>
-        <div class="nav-actions">
-          <button class="icon-button" aria-label="تبديل اللغة">EN</button>
-          <button class="icon-button cart-button" aria-label="سلة التسوق">◎<span class="cart-count">0</span></button>
-          <button class="menu-button" aria-label="فتح القائمة">☰</button>
-          <a class="button button-small button-outline sign-in" href="#signin">تسجيل الدخول</a>
-          <a class="button button-small button-primary" href="#sell">ابدأ البيع <span>↗</span></a>
-        </div>
-      </header>
-
-      <main id="top">
-        <section class="hero container">
-          <div class="hero-copy">
-            <div class="eyebrow"><span class="status-dot"></span> سوق المبدعين الرقمي العالمي</div>
-            <h1>حوّل أفكارك<br /><em>إلى قيمة.</em></h1>
-            <p class="hero-lede">اكتشف أصولاً رقمية مختارة بعناية، وابنِ شيئاً استثنائياً مع مجتمع من المبدعين حول العالم.</p>
-            <div class="hero-actions">
-              <a class="button button-primary button-large" href="#explore">استكشف المنتجات <span>↗</span></a>
-              <a class="text-link" href="#how-it-works">كيف يعمل RIMSN؟ <span>←</span></a>
-            </div>
-            <div class="hero-proof"><div class="avatar-stack"><span>س</span><span>م</span><span>ر</span><span>+</span></div><div><strong>+12,000</strong><small>مبدع يبيع على RIMSN</small></div></div>
-          </div>
-          <div class="hero-visual" aria-label="واجهة معاينة منتج رقمي">
-            <div class="liquid-orb orb-large"></div><div class="liquid-orb orb-small"></div>
-            <div class="code-card glass-card"><div class="window-dots"><i></i><i></i><i></i><span>RIMSN / components</span></div><div class="code-lines"><b><span class="purple">const</span> future <span class="cyan">=</span> <span class="orange">new</span> <span class="green">Experience</span>();</b><b><span class="purple">export default</span> future<span class="cyan">.</span><span class="blue">build</span>({</b><b class="indent"><span class="key">design</span><span class="cyan">:</span> <span class="string">"limitless"</span>,</b><b class="indent"><span class="key">impact</span><span class="cyan">:</span> <span class="string">"worldwide"</span></b><b>});</b></div><div class="code-footer"><span class="pulse"></span> live preview <span>⌘ K</span></div></div>
-            <div class="floating-tag tag-top"><span>✦</span> curated for you</div><div class="floating-tag tag-bottom">متاح الآن <b>↗</b></div>
-          </div>
-        </section>
-
-        <section class="stats-strip container glass-panel"><div><strong>48K<span>+</span></strong><small>منتج رقمي</small></div><div><strong>12K<span>+</span></strong><small>مبدع مستقل</small></div><div><strong>96</strong><small>دولة حول العالم</small></div><div><strong>4.9<span>/5</span></strong><small>متوسط التقييم</small></div><div class="stats-note">أدوات أفضل.<br /><strong>إنجاز أسرع.</strong></div></section>
-
-        <section id="explore" class="section container"><div class="section-heading"><div><p class="kicker">مختارات هذا الأسبوع</p><h2>أدوات تصنع <em>فرقاً.</em></h2></div><a class="view-all" href="#all">عرض الكل <span>←</span></a></div><div class="category-pills" id="categories"><button class="pill active" data-filter="all">الكل <span>48,204</span></button><button class="pill" data-filter="ui">واجهات UI <span>8,421</span></button><button class="pill" data-filter="code">قوالب برمجية <span>12,890</span></button><button class="pill" data-filter="design">تصميم <span>9,304</span></button><button class="pill" data-filter="audio">صوتيات <span>3,102</span></button></div><div class="product-grid"><article class="product-card" data-category="ui"><div class="product-art art-one"><span class="art-label">UI KIT</span><div class="art-grid"></div><div class="art-title">NOVA<br /><small>Design System</small></div></div><div class="product-meta"><div><span class="product-category">واجهات UI · 240 مكوّن</span><h3>Nova — نظام تصميم مستقبلي</h3><span class="creator">بواسطة <b>LAYERS™</b></span></div><strong class="price">$29</strong></div><button class="add-cart">أضف للسلة <span>+</span></button></article><article class="product-card" data-category="code"><div class="product-art art-two"><span class="art-label">CODE / 01</span><div class="terminal"><span>›</span><b>ship<br />faster<span class="cursor">_</span></b></div><div class="art-star">✦</div></div><div class="product-meta"><div><span class="product-category">قوالب برمجية · React</span><h3>Orbit — لوحة SaaS متكاملة</h3><span class="creator">بواسطة <b>CODECRAFT</b></span></div><strong class="price">$48</strong></div><button class="add-cart">أضف للسلة <span>+</span></button></article><article class="product-card" data-category="design"><div class="product-art art-three"><span class="art-label">VISUALS</span><div class="shape shape-a"></div><div class="shape shape-b"></div><div class="shape shape-c"></div><div class="art-title small-title">MOTION<br /><small>Volume 02</small></div></div><div class="product-meta"><div><span class="product-category">تصميم · 4K Assets</span><h3>Motion — حزمة أصول ثلاثية الأبعاد</h3><span class="creator">بواسطة <b>STUDIO 404</b></span></div><strong class="price">$36</strong></div><button class="add-cart">أضف للسلة <span>+</span></button></article></div></section>
-
-        <section id="creators" class="creator-banner container"><div><p class="kicker">للأشخاص الذين يصنعون</p><h2>لديك شيء يستحق<br /><em>أن يُرى؟</em></h2><p>انضم إلى آلاف المبدعين الذين يحولون شغفهم إلى دخل مستدام.</p><a class="button button-light" href="#sell">افتح متجرك مجاناً <span>↗</span></a></div><div class="creator-visual"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="creator-core">R<span>✦</span></div><span class="orbit-label label-one">YOUR<br />IDEA</span><span class="orbit-label label-two">GLOBAL<br />REACH</span></div></section>
-      </main>
-      <footer class="footer container"><a class="brand" href="#top"><span class="brand-mark">R</span><span>RIMSN</span></a><p>الطبقة الجديدة من التجارة الرقمية.</p><div class="footer-links"><a href="#about">عن RIMSN</a><a href="#support">الدعم</a><a href="#terms">الشروط</a><span>© 2026 RIMSN</span></div></footer>
-    </div>
-    <div class="toast" role="status" aria-live="polite"></div>
-    <script src="app.js"></script>
-  </body>
-</html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="RIMSN — سوق عالمي للمنتجات الرقمية للمبدعين." />
+  <meta name="theme-color" content="#080b16" />
+  <title>RIMSN — ابنِ المستقبل</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="site-shell"><div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+    <header class="topbar container">
+      <a class="brand" href="#top" aria-label="RIMSN home"><span class="brand-mark">R</span><span>RIMSN</span></a>
+      <nav class="desktop-nav" aria-label="التنقل الرئيسي"><a class="active" href="#explore">استكشف</a><a href="#categories">التصنيفات</a><a href="#creators">للمبدعين</a></nav>
+      <div class="nav-actions"><button class="icon-button" id="languageButton" aria-label="تبديل اللغة">EN</button><button class="icon-button cart-button" aria-label="سلة التسوق">◎<span class="cart-count">0</span></button><button class="menu-button" aria-label="فتح القائمة">☰</button><button class="button button-small button-outline" data-auth="login">تسجيل الدخول</button><button class="button button-small button-primary" data-auth="signup">ابدأ البيع <span>↗</span></button></div>
+    </header>
+    <main id="top">
+      <section class="hero container"><div class="hero-copy"><div class="eyebrow"><span class="status-dot"></span> سوق المبدعين الرقمي العالمي</div><h1>حوّل أفكارك<br><em>إلى قيمة.</em></h1><p class="hero-lede">اكتشف أصولاً رقمية مختارة بعناية، وابنِ شيئاً استثنائياً مع مجتمع من المبدعين حول العالم.</p><div class="hero-actions"><a class="button button-primary button-large" href="#explore">استكشف المنتجات <span>↗</span></a><a class="text-link" href="#how-it-works">كيف يعمل RIMSN؟ <span>←</span></a></div><div class="hero-proof"><div class="avatar-stack"><span>س</span><span>م</span><span>ر</span><span>+</span></div><div><strong>+12,000</strong><small>مبدع يبيع على RIMSN</small></div></div></div><div class="hero-visual" aria-label="واجهة معاينة منتج رقمي"><div class="liquid-orb orb-large"></div><div class="liquid-orb orb-small"></div><div class="code-card glass-card"><div class="window-dots"><i></i><i></i><i></i><span>RIMSN / components</span></div><div class="code-lines"><b><span class="purple">const</span> future <span class="cyan">=</span> <span class="orange">await</span> create();</b><b><span class="muted-code">// make your mark</span></b><b><span class="purple">return</span> <span class="cyan">{</span></b><b>&nbsp;&nbsp;vision: <span class="orange">'limitless'</span>,</b><b>&nbsp;&nbsp;impact: <span class="orange">'global'</span></b><b><span class="cyan">}</span></b></div><div class="mini-progress"><span></span></div></div><div class="floating-tag tag-top"><span>✦</span> curated for you</div><div class="floating-tag tag-bottom">متاح الآن <b>↗</b></div></div></section>
+      <section class="stats-strip container glass-panel"><div><strong>48K<span>+</span></strong><small>منتج رقمي</small></div><div><strong>12K<span>+</span></strong><small>مبدع مستقل</small></div><div><strong>96<span>%</span></strong><small>تقييم إيجابي</small></div><div><strong>140<span>+</span></strong><small>دولة حول العالم</small></div></section>
+      <section id="explore" class="section container"><div class="section-heading"><div><p class="kicker">مختارات هذا الأسبوع</p><h2>أدوات تصنع <em>فرقاً.</em></h2></div><a class="text-link" href="#explore">عرض الكل <span>←</span></a></div><div id="categories" class="filter-row"><button class="pill active" data-filter="all">الكل</button><button class="pill" data-filter="ui">واجهات UI</button><button class="pill" data-filter="templates">قوالب</button><button class="pill" data-filter="graphics">رسومات</button><button class="pill" data-filter="fonts">خطوط</button></div><div class="product-grid"><article class="product-card" data-category="ui"><div class="product-art art-one"><span class="art-label">NØVA</span><span class="art-circle"></span></div><div class="product-info"><div><h3>Nova UI Kit</h3><p>واجهة · 180 مكوّن</p></div><strong>$24</strong></div><button class="add-cart">أضف للسلة <span>+</span></button></article><article class="product-card" data-category="templates"><div class="product-art art-two"><span>ARCHIVE<br><b>09—24</b></span></div><div class="product-info"><div><h3>Archive Portfolio</h3><p>قالب Framer</p></div><strong>$32</strong></div><button class="add-cart">أضف للسلة <span>+</span></button></article><article class="product-card" data-category="graphics"><div class="product-art art-three"><span class="blob-word">FORM<br>FOLIO</span></div><div class="product-info"><div><h3>Form Folio</h3><p>حزمة رسومات</p></div><strong>$18</strong></div><button class="add-cart">أضف للسلة <span>+</span></button></article></div></section>
+      <section id="how-it-works" class="how-section container"><div><p class="kicker">بسيط، سريع، عالمي</p><h2>فكرتك تستحق<br><em>منصة أفضل.</em></h2></div><div class="steps"><div class="step"><span>01</span><div><h3>اصنع</h3><p>حوّل خبرتك إلى منتج رقمي يضيف قيمة حقيقية.</p></div></div><div class="step"><span>02</span><div><h3>انشر</h3><p>اعرض عملك أمام مجتمع عالمي من المشترين والمبدعين.</p></div></div><div class="step"><span>03</span><div><h3>انطلق</h3><p>نمِّ دخلك، وابنِ جمهورك، واترك أثراً لا يُنسى.</p></div></div></div></section>
+      <section id="creators" class="creator-banner container"><div><p class="kicker">للأشخاص الذين يصنعون</p><h2>لديك شيء يستحق<br><em>أن يُرى؟</em></h2><p>انضم إلى الجيل الجديد من المبدعين الرقميين.</p></div><button class="button button-light" data-auth="signup">ابدأ رحلتك <span>↗</span></button></section>
+    </main>
+    <footer class="footer container"><a class="brand" href="#top"><span class="brand-mark">R</span><span>RIMSN</span></a><p>الطبقة الجديدة من التجارة الرقمية.</p><span>© 2026 RIMSN</span></footer>
+  </div>
+  <div class="toast" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="authModal" aria-hidden="true"><section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="modal-close" aria-label="إغلاق">×</button><div class="auth-brand"><span class="brand-mark">R</span><span>RIMSN</span></div><div class="auth-heading"><p class="kicker">مساحتك الإبداعية</p><h2 id="authTitle">أهلاً بعودتك.</h2><p id="authSubtitle">سجّل الدخول لتكمل رحلتك.</p></div><div class="auth-tabs"><button data-mode="login" class="selected">تسجيل الدخول</button><button data-mode="signup">إنشاء حساب</button></div><form id="authForm"><label id="nameField" class="optional">الاسم الكامل<input name="name" type="text" autocomplete="name" placeholder="مثال: ريم محمد"></label><label>البريد الإلكتروني<input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><label>كلمة المرور<input name="password" type="password" autocomplete="current-password" required minlength="6" placeholder="••••••••"></label><button class="button button-primary submit-auth" type="submit">تسجيل الدخول <span>↗</span></button></form><button class="forgot-link" id="forgotPassword">نسيت كلمة المرور؟</button><p class="auth-note">بالمتابعة، أنت توافق على شروط الاستخدام وسياسة الخصوصية.</p><div class="auth-success" id="authSuccess" hidden></div></section></div>
+  <script>window.RIMSN_CONFIG = { supabaseUrl: '', supabaseAnonKey: '' };</script><script src="app.js"></script>
+</body></html>
