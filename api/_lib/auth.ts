@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
-import jwt from 'jsonwebtoken';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ObjectId } from 'mongodb';
 import { getDatabase } from './mongodb';
@@ -14,7 +13,26 @@ function secret() {
 }
 
 export function signToken(payload: TokenPayload) {
-  return jwt.sign(payload, secret(), { expiresIn: '7d' });
+  const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body = base64url(JSON.stringify({ ...payload, exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60 }));
+  const data = `${header}.${body}`;
+  const signature = base64url(crypto.createHmac('sha256', secret()).update(data).digest());
+  return `${data}.${signature}`;
+}
+
+function base64url(value: string | Buffer) {
+  return Buffer.from(value).toString('base64url');
+}
+
+function verifyToken(token: string): TokenPayload {
+  const [header, body, signature] = token.split('.');
+  if (!header || !body || !signature) throw new Error('invalid token');
+  const data = `${header}.${body}`;
+  const expected = crypto.createHmac('sha256', secret()).update(data).digest('base64url');
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) throw new Error('invalid signature');
+  const payload = JSON.parse(Buffer.from(body, 'base64url').toString()) as TokenPayload & { exp?: number };
+  if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) throw new Error('expired token');
+  return payload;
 }
 
 const scrypt = promisify(crypto.scrypt);
@@ -40,7 +58,7 @@ export async function requireUser(req: VercelRequest, res: VercelResponse, admin
     return null;
   }
   try {
-    const payload = jwt.verify(token, secret()) as TokenPayload;
+    const payload = verifyToken(token);
     if (adminOnly && payload.role !== 'admin') {
       res.status(403).json({ message: 'غير مصرح' });
       return null;
