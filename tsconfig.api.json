@@ -6,7 +6,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node", "vercel"],
+    "types": ["node"],
     "noEmit": true
   },
   "include": ["api/**/*.ts"]
