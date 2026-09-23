@@ -18,7 +18,7 @@ export function signToken(payload: TokenPayload) {
 
 export async function requireUser(req: VercelRequest, res: VercelResponse, adminOnly = false) {
   const header = req.headers.authorization;
-  const token = header?.startsWith('Bearer ') ? header.slice(7) : null;
+  const token = header?.startsWith('Bearer ') ? header.slice(7) : typeof req.query.token === 'string' ? req.query.token : null;
   if (!token) {
     res.status(401).json({ message: 'يجب تسجيل الدخول' });
     return null;

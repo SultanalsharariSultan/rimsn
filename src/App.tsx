@@ -1,270 +1,46 @@
-import {
-  BrowserRouter,
-  Link,
-  NavLink,
-  Route,
-  Routes,
-  useNavigate,
-  useParams,
-} from 'react-router-dom';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import type { User } from '@supabase/supabase-js';
-import { isSupabaseConfigured, supabase } from './lib/supabase';
+import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { FormEvent, ReactNode, useEffect, useState } from 'react';
 
-type Product = {
-  id: string;
-  slug: string;
-  title: string;
-  category: string;
-  price: number;
-  original_price: number | null;
-  rating: number;
-  reviews: number;
-  image_url: string;
-  description: string;
-  short_description: string;
-  tags: string[];
-  features: string[];
-  badge: string | null;
-  file_size: string;
-  format: string;
-  level: string;
-  storage_path: string;
-};
-
+type User = { id: string; name: string; email: string; role: 'admin' | 'customer' };
+type Product = { _id: string; title: string; category: string; price: number; originalPrice?: number; imageUrl: string; description: string; shortDescription?: string; tags?: string[]; features?: string[]; badge?: string; format?: string; fileSize?: string; level?: string; fileUrl?: string; active?: boolean };
 type CartItem = { id: string; qty: number };
-type Profile = { full_name: string | null; email: string | null };
 
-const formatPrice = (value: number) =>
-  new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(value);
-
-const usePageMeta = (title: string, description: string) => {
-  useEffect(() => {
-    document.title = title;
-    document.querySelector('meta[name="description"]')?.setAttribute('content', description);
-  }, [title, description]);
+const api = async <T,>(path: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem('rimsn_token');
+  const response = await fetch(`/api${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) } });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(body?.message || 'حدث خطأ غير متوقع');
+  return body as T;
 };
+const price = (value: number) => new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(value);
+const cartRead = (): CartItem[] => JSON.parse(localStorage.getItem('rimsn_cart') || '[]');
+const cartWrite = (items: CartItem[]) => { localStorage.setItem('rimsn_cart', JSON.stringify(items)); window.dispatchEvent(new Event('rimsn-cart')); };
 
 function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-
-  useEffect(() => {
-    if (!supabase) return;
-    void supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
-    return () => data.subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!supabase || !user) {
-      setProfile(null);
-      return;
-    }
-    void supabase.from('profiles').select('full_name,email').eq('id', user.id).maybeSingle()
-      .then(({ data }) => setProfile(data));
-  }, [user]);
-
-  return (
-    <BrowserRouter>
-      <div className="site-shell">
-        <Header user={user} profile={profile} />
-        <main className="page-wrap">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/products" element={<ProductsPage />} />
-            <Route path="/product/:id" element={<ProductDetailPage user={user} />} />
-            <Route path="/cart" element={<CartPage user={user} />} />
-            <Route path="/checkout" element={<CheckoutPage user={user} />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/dashboard" element={<DashboardPage user={user} profile={profile} />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-    </BrowserRouter>
-  );
-}
-
-function Header({ user, profile }: { user: User | null; profile: Profile | null }) {
-  const [cartCount, setCartCount] = useState(0);
-  useEffect(() => {
-    const update = () => setCartCount(JSON.parse(localStorage.getItem('rimsn_cart') ?? '[]').reduce((sum: number, item: CartItem) => sum + item.qty, 0));
-    update();
-    window.addEventListener('storage', update);
-    return () => window.removeEventListener('storage', update);
-  }, []);
-  return (
-    <header className="topbar glass-panel">
-      <Link to="/" className="brand-mark">رِمْسَن</Link>
-      <nav className="nav-menu" aria-label="التنقل الرئيسي">
-        <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>الرئيسية</NavLink>
-        <NavLink to="/products" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>المنتجات</NavLink>
-        {user ? <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>لوحة التحكم</NavLink> : null}
-      </nav>
-      <div className="topbar-actions">
-        <Link to={user ? '/dashboard' : '/auth'} className="ghost-btn small-btn">
-          {user ? profile?.full_name || user.email : 'تسجيل الدخول'}
-        </Link>
-        <Link to="/cart" className="cart-pill"><span>السلة</span><strong>{cartCount}</strong></Link>
-      </div>
-    </header>
-  );
-}
-
-function Footer() {
-  return <footer className="footer glass-panel"><div><strong>رِمْسَن</strong><p>متجر المنتجات الرقمية العربي.</p></div><div className="footer-links"><Link to="/products">المنتجات</Link><Link to="/auth">الحساب</Link><Link to="/dashboard">مشترياتي</Link></div></footer>;
-}
-
-function ConfigNotice() {
-  return <div className="empty-panel glass-panel error-panel"><h3>المتجر يحتاج إعداد قاعدة البيانات</h3><p>أضف VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY في Vercel ثم نفّذ ملف supabase/schema.sql.</p><Link className="btn primary" to="/products">تصفح الواجهة</Link></div>;
+  const [user, setUser] = useState<User | null>(() => JSON.parse(localStorage.getItem('rimsn_user') || 'null'));
+  const [cartCount, setCartCount] = useState(() => cartRead().reduce((sum, item) => sum + item.qty, 0));
+  useEffect(() => { const update = () => setCartCount(cartRead().reduce((sum, item) => sum + item.qty, 0)); window.addEventListener('rimsn-cart', update); return () => window.removeEventListener('rimsn-cart', update); }, []);
+  const logout = () => { localStorage.removeItem('rimsn_token'); localStorage.removeItem('rimsn_user'); setUser(null); };
+  return <BrowserRouter><div className="site-shell"><header className="topbar glass-panel"><Link to="/" className="brand-mark">رِمْسَن</Link><nav className="nav-menu"><NavLink to="/" end className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>الرئيسية</NavLink><NavLink to="/products" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>المنتجات</NavLink>{user ? <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>مشترياتي</NavLink> : null}{user?.role === 'admin' ? <NavLink to="/admin" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>الإدارة</NavLink> : null}</nav><div className="topbar-actions">{user ? <button className="ghost-btn small-btn" onClick={logout}>خروج</button> : <Link to="/auth" className="ghost-btn small-btn">تسجيل الدخول</Link>}<Link to="/cart" className="cart-pill">السلة <strong>{cartCount}</strong></Link></div></header><main className="page-wrap"><Routes><Route path="/" element={<Home />} /><Route path="/products" element={<Products />} /><Route path="/product/:id" element={<ProductDetail />} /><Route path="/cart" element={<Cart user={user} />} /><Route path="/checkout" element={<Checkout user={user} />} /><Route path="/auth" element={<Auth onLogin={setUser} />} /><Route path="/dashboard" element={<Dashboard user={user} />} /><Route path="/admin" element={<Admin user={user} />} /></Routes></main><footer className="footer glass-panel"><strong>رِمْسَن</strong><p>منتجات رقمية عربية، شراء آمن وتنزيل محمي.</p></footer></div></BrowserRouter>;
 }
 
 function useProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const load = () => {
-    if (!supabase) { setLoading(false); return; }
-    setLoading(true);
-    void supabase.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false })
-      .then(({ data, error: queryError }) => { setProducts((data as Product[]) ?? []); setError(queryError?.message ?? null); setLoading(false); });
-  };
-  useEffect(load, []);
-  return { products, loading, error, retry: load };
+  const [products, setProducts] = useState<Product[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  const load = () => { setLoading(true); api<Product[]>('/products').then(setProducts).catch((e) => setError(e.message)).finally(() => setLoading(false)); };
+  useEffect(load, []); return { products, loading, error, reload: load };
 }
-
-function HomePage() {
-  usePageMeta('رِمْسَن | متجر المنتجات الرقمية', 'متجر عربي لبيع المنتجات الرقمية.');
-  const { products, loading, error, retry } = useProducts();
-  return <><section className="hero glass-panel"><div className="hero-copy"><span className="eyebrow">متجر رقمي عربي متكامل</span><h1>منتجات رقمية تصنع فرقًا حقيقيًا في مشروعك.</h1><p>تصفح منتجاتك، ادفع بأمان، وحمّل مشترياتك من حسابك في أي وقت.</p><div className="hero-actions"><Link to="/products" className="btn primary">تصفح المنتجات</Link><Link to="/auth" className="btn secondary">إنشاء حساب</Link></div></div><div className="hero-visual"><div className="hero-card glass-panel"><div className="chart-box"><div className="chart-bar" style={{ height: '30%' }} /><div className="chart-bar" style={{ height: '55%' }} /><div className="chart-bar" style={{ height: '80%' }} /><div className="chart-bar" style={{ height: '98%' }} /></div><div className="sale-pill">تحميل آمن بعد الشراء</div></div></div></section><section className="section-block"><div className="section-heading"><div><span className="eyebrow">منتجات المتجر</span><h2>أحدث المنتجات</h2></div><Link to="/products" className="inline-link">عرض الكل</Link></div><ProductResult products={products.slice(0, 3)} loading={loading} error={error} retry={retry} /></section></>;
-}
-
-function ProductsPage() {
-  usePageMeta('منتجات رِمْسَن', 'تصفح المنتجات الرقمية المتاحة للشراء.');
-  const { products, loading, error, retry } = useProducts();
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('الكل');
-  const categories = useMemo(() => ['الكل', ...Array.from(new Set(products.map((item) => item.category)))], [products]);
-  const filtered = products.filter((item) => (category === 'الكل' || item.category === category) && (!search || `${item.title} ${item.category} ${item.tags.join(' ')}`.toLowerCase().includes(search.toLowerCase())));
-  return <section className="section-block"><div className="section-heading"><div><span className="eyebrow">المكتبة</span><h2>منتجات رقمية</h2></div></div><div className="toolbar glass-panel"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث عن منتج..." /><select value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((item) => <option key={item}>{item}</option>)}</select></div><ProductResult products={filtered} loading={loading} error={error} retry={retry} /></section>;
-}
-
-function ProductResult({ products, loading, error, retry }: { products: Product[]; loading: boolean; error: string | null; retry: () => void }) {
-  if (!isSupabaseConfigured) return <ConfigNotice />;
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message="تعذر تحميل المنتجات من قاعدة البيانات." onRetry={retry} />;
-  if (!products.length) return <EmptyState />;
-  return <div className="product-grid">{products.map((product) => <ProductCard key={product.id} product={product} />)}</div>;
-}
-
-function ProductCard({ product }: { product: Product }) {
-  const add = () => {
-    const cart: CartItem[] = JSON.parse(localStorage.getItem('rimsn_cart') ?? '[]');
-    const existing = cart.find((item) => item.id === product.id);
-    localStorage.setItem('rimsn_cart', JSON.stringify(existing ? cart.map((item) => item.id === product.id ? { ...item, qty: Math.min(item.qty + 1, 10) } : item) : [...cart, { id: product.id, qty: 1 }]));
-    window.dispatchEvent(new Event('storage'));
-  };
-  return <article className="product-card glass-panel"><div className="product-image-wrap"><img src={product.image_url} alt={product.title} className="product-image" />{product.badge ? <span className="product-badge">{product.badge}</span> : null}</div><div className="product-info"><div className="product-meta"><span>{product.category}</span><span>{product.rating} ★ ({product.reviews})</span></div><h3>{product.title}</h3><p>{product.short_description}</p><div className="tag-list">{product.tags?.map((tag) => <span key={tag}>{tag}</span>)}</div><div className="price-row"><strong>{formatPrice(product.price)}</strong><button className="btn primary small" onClick={add}>أضف للسلة</button></div><Link to={`/product/${product.id}`} className="inline-link">عرض التفاصيل</Link></div></article>;
-}
-
-function ProductDetailPage({ user }: { user: User | null }) {
-  const { id } = useParams();
-  const { products, loading, error, retry } = useProducts();
-  const product = products.find((item) => item.id === id);
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message="تعذر تحميل المنتج." onRetry={retry} />;
-  if (!product) return <EmptyState />;
-  usePageMeta(product.title, product.description);
-  return <section className="section-block product-detail"><div className="product-detail-grid"><div className="glass-panel detail-visual"><img src={product.image_url} alt={product.title} /></div><div className="detail-copy"><span className="eyebrow">{product.category}</span><h1>{product.title}</h1><div className="detail-meta"><span>⭐ {product.rating} ({product.reviews})</span><span>{product.format}</span><span>{product.file_size}</span></div><p>{product.description}</p><ul className="feature-list">{product.features?.map((feature) => <li key={feature}>{feature}</li>)}</ul><div className="price-panel"><strong>{formatPrice(product.price)}</strong><span className="level-badge">{product.level}</span></div><button className="btn primary" onClick={() => { const cart: CartItem[] = JSON.parse(localStorage.getItem('rimsn_cart') ?? '[]'); localStorage.setItem('rimsn_cart', JSON.stringify([...cart, { id: product.id, qty: 1 }])); window.dispatchEvent(new Event('storage')); }}>أضف إلى السلة</button>{user ? null : <p className="form-hint">ستحتاج إلى إنشاء حساب عند إتمام الشراء.</p>}</div></div></section>;
-}
-
-function CartPage({ user }: { user: User | null }) {
-  const [items, setItems] = useState<CartItem[]>(() => JSON.parse(localStorage.getItem('rimsn_cart') ?? '[]'));
-  const { products, loading } = useProducts();
-  const update = (next: CartItem[]) => { setItems(next); localStorage.setItem('rimsn_cart', JSON.stringify(next)); window.dispatchEvent(new Event('storage')); };
-  const rows = items.map((item) => ({ ...item, product: products.find((product) => product.id === item.id) })).filter((item) => item.product);
-  const total = rows.reduce((sum, row) => sum + (row.product?.price ?? 0) * row.qty, 0);
-  if (loading) return <LoadingState />;
-  if (!rows.length) return <EmptyCartState />;
-  return <section className="section-block checkout-shell"><div className="checkout-grid"><div className="glass-panel checkout-list">{rows.map((row) => <div className="cart-item-row" key={row.id}><img src={row.product?.image_url} alt={row.product?.title} /><div><h3>{row.product?.title}</h3><p>{row.product?.category}</p></div><div className="qty-box"><button onClick={() => update(items.map((item) => item.id === row.id ? { ...item, qty: item.qty - 1 } : item).filter((item) => item.qty > 0))}>-</button><span>{row.qty}</span><button onClick={() => update(items.map((item) => item.id === row.id ? { ...item, qty: item.qty + 1 } : item))}>+</button></div><strong>{formatPrice((row.product?.price ?? 0) * row.qty)}</strong></div>)}</div><aside className="glass-panel summary-panel"><h3>ملخص الطلب</h3><div className="summary-row total-row"><span>الإجمالي</span><strong>{formatPrice(total)}</strong></div>{user ? <Link to="/checkout" className="btn primary block-btn">متابعة للدفع</Link> : <Link to="/auth?redirect=checkout" className="btn primary block-btn">سجّل الدخول للشراء</Link>}</aside></div></section>;
-}
-
-function CheckoutPage({ user }: { user: User | null }) {
-  const navigate = useNavigate();
-  const [items] = useState<CartItem[]>(() => JSON.parse(localStorage.getItem('rimsn_cart') ?? '[]'));
-  const { products, loading } = useProducts();
-  const [busy, setBusy] = useState(false);
-  const rows = items.map((item) => ({ ...item, product: products.find((product) => product.id === item.id) })).filter((item) => item.product);
-  const total = rows.reduce((sum, row) => sum + (row.product?.price ?? 0) * row.qty, 0);
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!supabase || !user) { navigate('/auth?redirect=checkout'); return; }
-    setBusy(true);
-    const { data: order, error } = await supabase.from('orders').insert({ user_id: user.id, total, status: 'paid' }).select('id').single();
-    if (!error && order) {
-      await supabase.from('order_items').insert(rows.map((row) => ({ order_id: order.id, product_id: row.id, quantity: row.qty, unit_price: row.product?.price })));
-      localStorage.removeItem('rimsn_cart');
-      navigate('/dashboard');
-    }
-    setBusy(false);
-  };
-  if (!user) return <AuthRequired />;
-  if (loading) return <LoadingState />;
-  if (!rows.length) return <EmptyCartState />;
-  return <section className="section-block checkout-shell"><div className="checkout-grid"><form className="glass-panel checkout-form" onSubmit={submit}><h2>إتمام الطلب</h2><p>هذه عملية دفع تجريبية. اربط Stripe أو Tap مكان هذا النموذج لاحقًا.</p><label>الاسم<input required defaultValue={user.user_metadata.full_name ?? ''} /></label><label>البريد الإلكتروني<input required type="email" defaultValue={user.email ?? ''} /></label><label>رقم الهاتف<input required /></label><button disabled={busy} className="btn primary block-btn">{busy ? 'جارٍ إنشاء الطلب...' : 'تأكيد الشراء التجريبي'}</button></form><aside className="glass-panel summary-panel"><h3>الإجمالي</h3><div className="summary-row total-row"><span>المبلغ</span><strong>{formatPrice(total)}</strong></div></aside></div></section>;
-}
-
-function AuthPage() {
-  const navigate = useNavigate();
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [message, setMessage] = useState('');
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!supabase) { setMessage('أضف إعدادات Supabase أولًا.'); return; }
-    setMessage('');
-    if (mode === 'forgot') {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth` });
-      setMessage(error?.message ?? 'تم إرسال رابط استعادة كلمة المرور إلى بريدك.');
-      return;
-    }
-    const result = mode === 'login'
-      ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
-    if (result.error) setMessage(result.error.message);
-    else { setMessage(mode === 'register' ? 'تحقق من بريدك الإلكتروني لتفعيل الحساب.' : 'تم تسجيل الدخول.'); navigate('/dashboard'); }
-  };
-  return <section className="auth-wrap section-block"><div className="glass-panel auth-card"><div className="auth-tabs">{(['login', 'register', 'forgot'] as const).map((item) => <button key={item} type="button" className={mode === item ? 'tab active' : 'tab'} onClick={() => setMode(item)}>{item === 'login' ? 'تسجيل الدخول' : item === 'register' ? 'إنشاء حساب' : 'نسيت كلمة المرور'}</button>)}</div><form className="auth-form" onSubmit={submit}>{mode === 'register' ? <label>الاسم الكامل<input required value={name} onChange={(event) => setName(event.target.value)} /></label> : null}<label>البريد الإلكتروني<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>{mode !== 'forgot' ? <label>كلمة المرور<input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label> : null}<button className="btn primary block-btn">{mode === 'login' ? 'تسجيل الدخول' : mode === 'register' ? 'إنشاء الحساب' : 'إرسال رابط الاستعادة'}</button>{message ? <p className="form-hint">{message}</p> : null}</form></div></section>;
-}
-
-function DashboardPage({ user, profile }: { user: User | null; profile: Profile | null }) {
-  const [orders, setOrders] = useState<Array<{ id: string; total: number; created_at: string; order_items: Array<{ product: Product; quantity: number }> }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
-  usePageMeta('لوحة التحكم', 'مشتريات وتنزيلات العميل.');
-  useEffect(() => {
-    if (!supabase || !user) { setLoading(false); return; }
-    void supabase.from('orders').select('id,total,created_at,order_items(quantity,product:products(*))').eq('user_id', user.id).eq('status', 'paid').order('created_at', { ascending: false }).then(({ data }) => { setOrders((data as unknown as typeof orders) ?? []); setLoading(false); });
-  }, [user]);
-  const download = async (product: Product) => {
-    if (!supabase || !user) return;
-    const { data } = await supabase.storage.from('digital-products').createSignedUrl(product.storage_path, 60);
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
-    else setMessage('تعذر إنشاء رابط التحميل. تأكد من رفع الملف داخل التخزين.');
-  };
-  if (!user) return <AuthRequired />;
-  if (loading) return <LoadingState />;
-  const products = orders.flatMap((order) => order.order_items.map((item) => item.product)).filter(Boolean);
-  return <section className="section-block dashboard-shell"><div className="dashboard-head glass-panel"><div><span className="eyebrow">حساب العميل</span><h2>{profile?.full_name || user.email}</h2><p>{user.email}</p></div><button className="btn secondary" onClick={() => void supabase?.auth.signOut()}>تسجيل الخروج</button></div><div className="dashboard-stats"><div className="glass-panel stat-card"><span>الطلبات المدفوعة</span><strong>{orders.length}</strong></div><div className="glass-panel stat-card"><span>المنتجات المملوكة</span><strong>{products.length}</strong></div><div className="glass-panel stat-card"><span>التحميل</span><strong>مؤمّن</strong></div></div><div className="glass-panel dashboard-list"><h3>مشترياتي والتنزيلات</h3>{message ? <p className="form-hint">{message}</p> : null}{products.length ? products.map((product) => <div className="dashboard-item" key={product.id}><div><h4>{product.title}</h4><small>{product.category}</small></div><button className="btn secondary small" onClick={() => void download(product)}>تحميل المنتج</button></div>) : <EmptyState compact />}</div></section>;
-}
-
-function AuthRequired() { return <div className="empty-panel glass-panel"><h3>سجّل الدخول أولًا</h3><p>أنشئ حسابًا أو سجّل الدخول حتى تشتري وتحصل على ملفاتك.</p><Link to="/auth" className="btn primary">الدخول للحساب</Link></div>; }
-function LoadingState() { return <div className="loading-grid">{[1, 2, 3].map((item) => <div className="skeleton-card glass-panel" key={item} />)}</div>; }
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) { return <div className="empty-panel glass-panel error-panel"><h3>حدث خطأ</h3><p>{message}</p><button className="btn primary" onClick={onRetry}>إعادة المحاولة</button></div>; }
-function EmptyState({ compact = false }: { compact?: boolean }) { return <div className={compact ? 'empty-panel compact glass-panel' : 'empty-panel glass-panel'}><h3>لا توجد منتجات منشورة</h3><p>أضف أول منتج من لوحة Supabase ثم سيظهر هنا تلقائيًا.</p><Link to="/auth" className="btn secondary">دخول الإدارة</Link></div>; }
-function EmptyCartState() { return <div className="empty-panel glass-panel"><h3>سلة المشتريات فارغة</h3><p>أضف منتجًا من المتجر للمتابعة.</p><Link to="/products" className="btn primary">تصفح المنتجات</Link></div>; }
+function Home() { const data = useProducts(); return <><section className="hero glass-panel"><div className="hero-copy"><span className="eyebrow">متجر رقمي عربي</span><h1>منتجات رقمية موثوقة لمشروعك.</h1><p>اشترِ منتجك، ادفع، ثم حمّل ملفاتك من حسابك بأمان.</p><div className="hero-actions"><Link className="btn primary" to="/products">تصفح المنتجات</Link><Link className="btn secondary" to="/auth">إنشاء حساب</Link></div></div><div className="hero-visual"><div className="hero-card glass-panel"><div className="chart-box"><div className="chart-bar" style={{ height: '35%' }} /><div className="chart-bar" style={{ height: '58%' }} /><div className="chart-bar" style={{ height: '80%' }} /><div className="chart-bar" style={{ height: '98%' }} /></div><div className="sale-pill">تنزيل محمي بعد الشراء</div></div></div></section><section className="section-block"><div className="section-heading"><div><span className="eyebrow">المنتجات</span><h2>أحدث المنتجات</h2></div><Link to="/products" className="inline-link">عرض الكل</Link></div><ProductGrid products={data.products.slice(0, 3)} loading={data.loading} error={data.error} reload={data.reload} /></section></>; }
+function Products() { const data = useProducts(); const [query, setQuery] = useState(''); const [category, setCategory] = useState('الكل'); const categories = ['الكل', ...new Set(data.products.map((p) => p.category))]; const products = data.products.filter((p) => (category === 'الكل' || p.category === category) && (!query || `${p.title} ${p.category} ${(p.tags || []).join(' ')}`.toLowerCase().includes(query.toLowerCase()))); return <section className="section-block"><div className="section-heading"><div><span className="eyebrow">المكتبة</span><h2>المنتجات الرقمية</h2></div></div><div className="toolbar glass-panel"><input placeholder="ابحث عن منتج..." value={query} onChange={(e) => setQuery(e.target.value)} /><select value={category} onChange={(e) => setCategory(e.target.value)}>{categories.map((item) => <option key={item}>{item}</option>)}</select></div><ProductGrid products={products} loading={data.loading} error={data.error} reload={data.reload} /></section>; }
+function ProductGrid({ products, loading, error, reload }: { products: Product[]; loading: boolean; error: string; reload: () => void }) { if (loading) return <Loading />; if (error) return <Empty title="تعذر تحميل المنتجات" text={error} action={<button className="btn primary" onClick={reload}>إعادة المحاولة</button>} />; if (!products.length) return <Empty title="لا توجد منتجات منشورة" text="أضف منتجاتك من لوحة الإدارة." />; return <div className="product-grid">{products.map((p) => <ProductCard key={p._id} product={p} />)}</div>; }
+function ProductCard({ product }: { product: Product }) { const add = () => { const items = cartRead(); const exists = items.find((i) => i.id === product._id); cartWrite(exists ? items.map((i) => i.id === product._id ? { ...i, qty: i.qty + 1 } : i) : [...items, { id: product._id, qty: 1 }]); }; return <article className="product-card glass-panel"><div className="product-image-wrap"><img className="product-image" src={product.imageUrl} alt={product.title} />{product.badge ? <span className="product-badge">{product.badge}</span> : null}</div><div className="product-info"><div className="product-meta"><span>{product.category}</span><span>منتج رقمي</span></div><h3>{product.title}</h3><p>{product.shortDescription || product.description}</p><div className="price-row"><strong>{price(product.price)}</strong><button className="btn primary small" onClick={add}>أضف للسلة</button></div><Link className="inline-link" to={`/product/${product._id}`}>عرض التفاصيل</Link></div></article>; }
+function ProductDetail() { const { id } = useParams(); const { products, loading } = useProducts(); const product = products.find((p) => p._id === id); if (loading) return <Loading />; if (!product) return <Empty title="المنتج غير موجود" text="تحقق من الرابط أو أضف المنتج من الإدارة." />; return <section className="section-block product-detail"><div className="product-detail-grid"><div className="glass-panel detail-visual"><img src={product.imageUrl} alt={product.title} /></div><div className="detail-copy"><span className="eyebrow">{product.category}</span><h1>{product.title}</h1><p>{product.description}</p><ul className="feature-list">{(product.features || []).map((f) => <li key={f}>{f}</li>)}</ul><div className="price-panel"><strong>{price(product.price)}</strong><span className="level-badge">{product.level || 'رقمي'}</span></div><button className="btn primary" onClick={() => { cartWrite([...cartRead(), { id: product._id, qty: 1 }]); }}>أضف إلى السلة</button></div></div></section>; }
+function Cart({ user }: { user: User | null }) { const [items, setItems] = useState(cartRead); const { products, loading } = useProducts(); const update = (next: CartItem[]) => { setItems(next); cartWrite(next); }; const rows = items.map((item) => ({ ...item, product: products.find((p) => p._id === item.id) })).filter((row) => row.product); const total = rows.reduce((s, r) => s + (r.product?.price || 0) * r.qty, 0); if (loading) return <Loading />; if (!rows.length) return <Empty title="السلة فارغة" text="أضف منتجًا للمتابعة." action={<Link className="btn primary" to="/products">تصفح المنتجات</Link>} />; return <section className="section-block checkout-shell"><div className="checkout-grid"><div className="glass-panel checkout-list">{rows.map((row) => <div className="cart-item-row" key={row.id}><img src={row.product?.imageUrl} alt={row.product?.title} /><div><h3>{row.product?.title}</h3><p>{row.product?.category}</p></div><div className="qty-box"><button onClick={() => update(items.map((i) => i.id === row.id ? { ...i, qty: i.qty - 1 } : i).filter((i) => i.qty > 0))}>-</button><span>{row.qty}</span><button onClick={() => update(items.map((i) => i.id === row.id ? { ...i, qty: i.qty + 1 } : i))}>+</button></div><strong>{price((row.product?.price || 0) * row.qty)}</strong></div>)}</div><aside className="glass-panel summary-panel"><h3>الإجمالي</h3><div className="summary-row total-row"><span>المجموع</span><strong>{price(total)}</strong></div>{user ? <Link to="/checkout" className="btn primary block-btn">متابعة للدفع</Link> : <Link to="/auth" className="btn primary block-btn">سجل الدخول للشراء</Link>}</aside></div></section>; }
+function Auth({ onLogin }: { onLogin: (user: User) => void }) { const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login'); const [form, setForm] = useState({ name: '', email: '', password: '' }); const [message, setMessage] = useState(''); const submit = async (e: FormEvent) => { e.preventDefault(); try { if (mode === 'forgot') { const data = await api<{ message: string }>('/auth/forgot', { method: 'POST', body: JSON.stringify({ email: form.email }) }); setMessage(data.message); return; } const data = await api<{ token: string; user: User }>(`/auth/${mode === 'register' ? 'register' : 'login'}`, { method: 'POST', body: JSON.stringify(form) }); localStorage.setItem('rimsn_token', data.token); localStorage.setItem('rimsn_user', JSON.stringify(data.user)); onLogin(data.user); setMessage('تم تسجيل الدخول بنجاح'); } catch (e) { setMessage((e as Error).message); } }; return <section className="auth-wrap section-block"><div className="glass-panel auth-card"><div className="auth-tabs">{(['login', 'register', 'forgot'] as const).map((item) => <button className={mode === item ? 'tab active' : 'tab'} key={item} onClick={() => setMode(item)}>{item === 'login' ? 'تسجيل الدخول' : item === 'register' ? 'إنشاء حساب' : 'استعادة كلمة المرور'}</button>)}</div><form className="auth-form" onSubmit={submit}>{mode === 'register' ? <label>الاسم<input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label> : null}<label>البريد<input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>{mode !== 'forgot' ? <label>كلمة المرور<input required minLength={8} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></label> : null}<button className="btn primary block-btn">{mode === 'login' ? 'دخول' : mode === 'register' ? 'إنشاء الحساب' : 'إرسال رابط الاستعادة'}</button>{message ? <p>{message}</p> : null}</form></div></section>; }
+function Checkout({ user }: { user: User | null }) { const navigate = useNavigate(); const { products, loading } = useProducts(); const items = cartRead(); const rows = items.map((item) => ({ ...item, product: products.find((p) => p._id === item.id) })).filter((r) => r.product); const total = rows.reduce((s, r) => s + (r.product?.price || 0) * r.qty, 0); const submit = async (e: FormEvent) => { e.preventDefault(); try { await api('/orders', { method: 'POST', body: JSON.stringify({ items: rows.map((r) => ({ productId: r.id, quantity: r.qty })) }) }); cartWrite([]); navigate('/dashboard'); } catch (err) { alert((err as Error).message); } }; if (!user) return <AuthRequired />; if (loading) return <Loading />; return <section className="section-block checkout-shell"><div className="checkout-grid"><form className="glass-panel checkout-form" onSubmit={submit}><h2>إتمام الطلب</h2><p>الدفع الحالي تجريبي. اربط Stripe أو Tap قبل استقبال أموال حقيقية.</p><label>الاسم<input required defaultValue={user.name} /></label><label>البريد<input required type="email" defaultValue={user.email} /></label><button className="btn primary block-btn">تأكيد الشراء التجريبي</button></form><aside className="glass-panel summary-panel"><h3>الإجمالي</h3><strong>{price(total)}</strong></aside></div></section>; }
+function Dashboard({ user }: { user: User | null }) { const [orders, setOrders] = useState<Array<{ items: Array<{ productId: string; title: string; quantity: number }> }>>([]); const [error, setError] = useState(''); useEffect(() => { if (user) api<typeof orders>('/orders').then(setOrders).catch((e) => setError(e.message)); }, [user]); if (!user) return <AuthRequired />; const download = (id: string) => { const token = localStorage.getItem('rimsn_token'); window.open(`/api/download/${id}?token=${encodeURIComponent(token || '')}`, '_blank'); }; const items = orders.flatMap((o) => o.items); return <section className="section-block dashboard-shell"><div className="dashboard-head glass-panel"><div><span className="eyebrow">حساب العميل</span><h2>{user.name}</h2><p>{user.email}</p></div></div><div className="glass-panel dashboard-list"><h3>مشترياتي والتنزيلات</h3>{error ? <p>{error}</p> : items.length ? items.map((item) => <div className="dashboard-item" key={item.productId}><div><h4>{item.title}</h4><small>تم شراؤه</small></div><button className="btn secondary small" onClick={() => download(item.productId)}>تحميل المنتج</button></div>) : <Empty title="لا توجد مشتريات" text="ستظهر منتجاتك هنا بعد الشراء." />}</div></section>; }
+function Admin({ user }: { user: User | null }) { const [products, setProducts] = useState<Product[]>([]); const [orders, setOrders] = useState<Array<{ _id: string; total: number; status: string }>>([]); const [form, setForm] = useState({ title: '', category: '', price: '', imageUrl: '', description: '', fileUrl: '' }); const [message, setMessage] = useState(''); const load = async () => { try { const [nextProducts, nextOrders] = await Promise.all([api<Product[]>('/products'), api<typeof orders>('/admin/orders')]); setProducts(nextProducts); setOrders(nextOrders); } catch (e) { setMessage((e as Error).message); } }; useEffect(() => { if (user?.role === 'admin') void load(); }, [user]); if (!user || user.role !== 'admin') return <AuthRequired />; const add = async (e: FormEvent) => { e.preventDefault(); try { await api('/products', { method: 'POST', body: JSON.stringify({ ...form, price: Number(form.price), shortDescription: form.description }) }); setForm({ title: '', category: '', price: '', imageUrl: '', description: '', fileUrl: '' }); setMessage('تمت إضافة المنتج'); await load(); } catch (err) { setMessage((err as Error).message); } }; const remove = async (id: string) => { await api(`/admin/products/${id}`, { method: 'DELETE' }); await load(); }; return <section className="section-block dashboard-shell"><div className="section-heading"><div><span className="eyebrow">صلاحيات المدير</span><h2>إدارة المتجر</h2></div></div><form className="glass-panel checkout-form" onSubmit={add}><div className="field-grid">{Object.entries(form).map(([key, value]) => <label key={key}>{({ title: 'اسم المنتج', category: 'التصنيف', price: 'السعر', imageUrl: 'رابط الصورة', description: 'الوصف', fileUrl: 'رابط الملف المحمي' } as Record<string, string>)[key]}<input required={key !== 'fileUrl'} value={value} onChange={(e) => setForm({ ...form, [key]: e.target.value })} /></label>)}</div><button className="btn primary">إضافة المنتج</button>{message ? <p>{message}</p> : null}</form><div className="glass-panel dashboard-list"><h3>المنتجات الحالية</h3>{products.map((p) => <div className="dashboard-item" key={p._id}><div><h4>{p.title}</h4><small>{price(p.price)}</small></div><button className="text-btn" onClick={() => void remove(p._id)}>تعطيل</button></div>)}</div><div className="glass-panel dashboard-list"><h3>آخر الطلبات</h3>{orders.map((order) => <div className="dashboard-item" key={order._id}><div><h4>طلب #{order._id.slice(-6)}</h4><small>{order.status}</small></div><strong>{price(order.total)}</strong></div>)}</div></section>; }
+function AuthRequired() { return <Empty title="سجّل الدخول أولًا" text="تحتاج إلى حساب للوصول." action={<Link className="btn primary" to="/auth">تسجيل الدخول</Link>} />; }
+function Loading() { return <div className="loading-grid">{[1, 2, 3].map((n) => <div className="skeleton-card glass-panel" key={n} />)}</div>; }
+function Empty({ title, text, action }: { title: string; text: string; action?: ReactNode }) { return <div className="empty-panel glass-panel"><h3>{title}</h3><p>{text}</p>{action}</div>; }
 
 export default App;
