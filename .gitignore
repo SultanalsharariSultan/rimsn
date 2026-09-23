@@ -5,3 +5,6 @@ dist
 npm-debug.log*
 *.tsbuildinfo
 
+*.tsbuildinfo
+*.d.ts
+
