@@ -1,7 +1,6 @@
-
 # رِمْسَن | متجر المنتجات الرقمية
 
-متجر عربي RTL مبني بـ React وVite، مربوط بقاعدة بيانات ومصادقة وتخزين ملفات عبر Supabase. لم تعد المنتجات أو الحسابات التجريبية موجودة في الواجهة؛ المنتجات تظهر فقط بعد إدخالها في جدول `products`.
+متجر عربي RTL مبني بـ React وVite مع API serverless على Vercel وMongoDB. لم تعد المنتجات أو الحسابات التجريبية موجودة في الواجهة؛ المنتجات تظهر فقط بعد إدخالها في Collection `products`.
 
 ## التشغيل المحلي
 
@@ -11,38 +10,44 @@ copy .env.example .env
 npm run dev
 ```
 
-ضع قيم Supabase الحقيقية داخل `.env`:
+## متغيرات Vercel
+
+أضفها في **Vercel → Settings → Environment Variables**، ولا تضع `MONGODB_URI` داخل GitHub:
 
 ```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
+MONGODB_URI=mongodb+srv://...
+MONGODB_DB=rimsn
+JWT_SECRET=ضع-قيمة-عشوائية-طويلة
+ADMIN_EMAIL=بريدك-الذي-سيصبح-أدمن
+APP_URL=https://www.rimsn.com
 ```
 
-## إعداد Supabase
+## تشغيل MongoDB
 
-1. أنشئ مشروعًا في Supabase.
-2. افتح **SQL Editor** والصق الملف `supabase/schema.sql` ثم نفذه مرة واحدة.
-3. أنشئ مستخدم الإدارة من **Authentication > Users**.
-4. أضف منتجاتك الحقيقية داخل جدول `products`، وضع ملفاتها في Storage bucket باسم `digital-products`.
-5. يجب أن يطابق `storage_path` في المنتج مسار الملف داخل الـ bucket.
-6. فعّل تأكيد البريد من Authentication إذا أردت منع الحسابات غير المؤكدة.
+1. اضبط `ADMIN_EMAIL` على بريدك قبل إنشاء الحساب.
+2. أنشئ حسابك من نموذج إنشاء الحساب؛ سيحصل هذا البريد على `role: "admin"`.
+3. Collection `users` تستخدم: `name`, `email`, `passwordHash`, `role`.
+4. أضف المنتجات في `products` باستخدام: `title`, `price`, `imageUrl`, `description`, `fileUrl`, `active`.
+5. `fileUrl` يجب أن يكون رابطًا خاصًا أو موقّتًا من مزود تخزين؛ لا تستخدم رابطًا عامًا دائمًا للملفات المدفوعة.
+6. الطلبات تُحفظ في `orders`، ولا يسمح endpoint التحميل إلا لمستخدم يملك طلبًا بحالة `paid`.
 
-## النشر على Vercel
+## API
 
-في إعدادات المشروع على Vercel، أضف نفس متغيري البيئة `VITE_SUPABASE_URL` و`VITE_SUPABASE_ANON_KEY` لكل البيئات، ثم أعد النشر.
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/forgot`
+- `POST /api/auth/reset`
+- `GET /api/products`
+- `POST /api/products` للأدمن فقط
+- `PATCH /api/admin/products/:id` للأدمن فقط
+- `DELETE /api/admin/products/:id` للأدمن فقط
+- `GET /api/orders` للمستخدم المسجل
+- `POST /api/orders` للمستخدم المسجل
+- `GET /api/download/:productId` بعد التحقق من الشراء
 
-## ما تم ربطه
+## الدفع
 
-- تسجيل الدخول وإنشاء الحساب واستعادة كلمة المرور عبر Supabase Auth.
-- المنتجات والبحث والتصنيف من قاعدة البيانات بدل البيانات التجريبية.
-- إنشاء الطلبات وعناصر الطلب بعد الشراء التجريبي.
-- لوحة العميل تعرض المنتجات المدفوعة فقط.
-- تنزيل ملفات موقعة لمدة دقيقة بعد التحقق من ملكية المنتج.
-- سياسات RLS تمنع قراءة الطلبات أو الملفات الخاصة بالمستخدمين الآخرين.
-
-## الدفع الحقيقي
-
-الدفع الموجود حاليًا تجريبي ويسجل الطلب كـ `paid`. قبل البيع الحقيقي، استبدل submit في `CheckoutPage` بـ Stripe Checkout أو Tap عبر Backend/Edge Function، ولا تجعل المتصفح يحدد حالة الدفع بنفسه.
+الطلب الحالي تجريبي. قبل استقبال أموال حقيقية، اربط Stripe أو Tap عبر Backend/Webhook، ولا تجعل المتصفح يحدد حالة الدفع `paid` بنفسه.
 
 ## البناء
 

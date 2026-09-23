@@ -1,0 +1,22 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { bcrypt, getDatabase, signToken } from '../_lib/auth';
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+  const { name, email, password } = req.body ?? {};
+  if (!email || !password || password.length < 8) return res.status(400).json({ message: 'البيانات أو كلمة المرور غير صالحة' });
+  const db = await getDatabase();
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const exists = await db.collection('users').findOne({ email: normalizedEmail });
+  if (exists) return res.status(409).json({ message: 'البريد مستخدم مسبقًا' });
+  const role = normalizedEmail === String(process.env.ADMIN_EMAIL || '').trim().toLowerCase() ? 'admin' : 'customer';
+  const result = await db.collection('users').insertOne({
+    name: String(name || 'عميل'),
+    email: normalizedEmail,
+    passwordHash: await bcrypt.hash(password, 12),
+    role,
+    createdAt: new Date(),
+  });
+  const token = signToken({ sub: result.insertedId.toString(), role, email: normalizedEmail });
+  return res.status(201).json({ token, user: { id: result.insertedId, name, email: normalizedEmail, role } });
+}
