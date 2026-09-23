@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { bcrypt, getDatabase } from '../_lib/auth';
+import { getDatabase, hashPassword } from '../_lib/auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
@@ -10,7 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const db = await getDatabase();
     const user = await db.collection('users').findOne({ email: String(email).toLowerCase(), resetTokenHash: crypto.createHash('sha256').update(String(token)).digest('hex'), resetTokenExpiresAt: { $gt: new Date() } });
     if (!user) return res.status(400).json({ message: 'الرابط غير صالح أو منتهي' });
-    await db.collection('users').updateOne({ _id: user._id }, { $set: { passwordHash: await bcrypt.hash(password, 12) }, $unset: { resetTokenHash: '', resetTokenExpiresAt: '' } });
+    await db.collection('users').updateOne({ _id: user._id }, { $set: { passwordHash: await hashPassword(password) }, $unset: { resetTokenHash: '', resetTokenExpiresAt: '' } });
     return res.json({ message: 'تم تغيير كلمة المرور' });
   } catch (error) {
     console.error('reset password failed', error);

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { bcrypt, getDatabase, signToken } from '../_lib/auth';
+import { getDatabase, hashPassword, signToken } from '../_lib/auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const result = await db.collection('users').insertOne({
       name: String(name || 'عميل'),
       email: normalizedEmail,
-      passwordHash: await bcrypt.hash(String(password), 12),
+      passwordHash: await hashPassword(String(password)),
       role,
       createdAt: new Date(),
     });

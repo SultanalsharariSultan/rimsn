@@ -1,4 +1,5 @@
-import bcrypt from 'bcryptjs';
+import crypto from 'node:crypto';
+import { promisify } from 'node:util';
 import jwt from 'jsonwebtoken';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ObjectId } from 'mongodb';
@@ -14,6 +15,21 @@ function secret() {
 
 export function signToken(payload: TokenPayload) {
   return jwt.sign(payload, secret(), { expiresIn: '7d' });
+}
+
+const scrypt = promisify(crypto.scrypt);
+
+export async function hashPassword(password: string) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derivedKey = (await scrypt(password, salt, 64)) as Buffer;
+  return `scrypt$${salt}$${derivedKey.toString('hex')}`;
+}
+
+export async function verifyPassword(password: string, stored: string) {
+  const [algorithm, salt, key] = String(stored).split('$');
+  if (algorithm !== 'scrypt' || !salt || !key) return false;
+  const derivedKey = (await scrypt(password, salt, 64)) as Buffer;
+  return crypto.timingSafeEqual(Buffer.from(key, 'hex'), derivedKey);
 }
 
 export async function requireUser(req: VercelRequest, res: VercelResponse, adminOnly = false) {
@@ -36,4 +52,4 @@ export async function requireUser(req: VercelRequest, res: VercelResponse, admin
   }
 }
 
-export { bcrypt, ObjectId, getDatabase };
+export { ObjectId, getDatabase };
