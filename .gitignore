@@ -8,3 +8,6 @@ npm-debug.log*
 *.tsbuildinfo
 *.d.ts
 
+vite.config.js
+vite.config.d.ts
+
